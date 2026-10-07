@@ -20,9 +20,14 @@ Whether a project is Active or Complete. A complete project leaves the active li
 RPG label: Complete → "Quest complete".
 
 **Time entry**:
-One recorded stretch of work for a client, with a duration.
+One recorded stretch of work for a client: a date and a duration, optionally with start and end times and a note. Its date is the day it started, even if it runs past midnight. Once on an invoice it is locked.
 RPG label: none — the UI says "Time entry".
 _Avoid_: Log entry, session, adventure
+
+**Timer**:
+The running clock that becomes a time entry when stopped. At most one runs at a time; starting another stops the first. It keeps running through sleep and app restarts. Discarding a timer records nothing.
+RPG label: none — the UI says "Timer".
+_Avoid_: Stopwatch, tracker
 
 **Hours**:
 Tracked time, as shown to the user.
