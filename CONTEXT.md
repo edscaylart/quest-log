@@ -20,7 +20,7 @@ Whether a project is Active or Complete. A complete project leaves the active li
 RPG label: Complete → "Quest complete".
 
 **Time entry**:
-One recorded stretch of work for a client: a date and a duration, optionally with start and end times and a note. Its date is the day it started, even if it runs past midnight. Once on an invoice it is locked.
+One recorded stretch of work for a client: a date and a duration, optionally with start and end times and a note. Its date is the day it started, even if it runs past midnight. It sits on at most one invoice. Once that invoice is Sent, the entry is locked.
 RPG label: none — the UI says "Time entry".
 _Avoid_: Log entry, session, adventure
 
@@ -40,19 +40,27 @@ RPG label for money, in any state — earned, owed or paid.
 _Avoid_: Bounty
 
 **Rate**:
-The amount billed per hour of work. Every client has one; a project may override it. A time entry's rate is its project's rate if set, else its client's. Until a time entry is on an invoice its rate is live — changing a client or project rate reprices its uninvoiced time; once invoiced, the rate is frozen on the invoice. Every time entry is billable; work not to be charged goes on a project with a rate of zero.
+The amount billed per hour of work. Every client has one; a project may override it. A time entry's rate is its project's rate if set, else its client's. Until a time entry is invoiced (on a Sent or Paid invoice) its rate is live — changing a client or project rate reprices its uninvoiced time, including time on a Draft; once Sent, the rate is frozen on the invoice. Every time entry is billable; work not to be charged goes on a project with a rate of zero.
 RPG label: "Gold/hr".
 _Avoid_: Bounty, wage, fee, billable flag
 
 **Invoice**:
-A request for payment to one client, covering time entries over a period.
+A request for payment to one client, covering a chosen set of its time entries over a period. A Draft is a working copy that follows live rates and details; Sending freezes it into a fixed record with a number, an issue date and a due date.
 RPG label: "Scroll".
+
+**Invoice line**:
+One row of an invoice: all its time entries for one project, or for no project ("General"). Its amount is the exact hours times the rate, rounded to the cent once.
+RPG label: none.
+
+**Invoice number**:
+A sequential identifier given to an invoice when it is first Sent. Drafts have none until then; a reverted invoice keeps its number.
+RPG label: none.
 _Avoid_: Quest complete (for a paid invoice)
 
 **Invoice state**:
-Where an invoice is in its life: Draft, Sent or Paid.
+Where an invoice is in its life: Draft, Sent or Paid. A Sent invoice can return to Draft, and a Paid one to Sent, to correct mistakes. A Sent invoice past its due date is overdue — a condition, not a state.
 RPG labels: Draft → "Unsealed", Sent → "Sealed", Paid → "Redeemed".
 
 **Earnings**:
-Gold from time entries, split by where it stands in billing: Uninvoiced (not on any invoice), Invoiced-unpaid (on a Sent invoice), Paid (on a Paid invoice).
+Gold from time entries, split by where it stands in billing: Uninvoiced (not on a Sent or Paid invoice — Drafts included), Invoiced-unpaid (on a Sent invoice), Paid (on a Paid invoice).
 RPG labels: Uninvoiced → "Unclaimed", Invoiced-unpaid → "Owed", Paid → "Treasury".
