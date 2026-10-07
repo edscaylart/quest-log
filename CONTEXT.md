@@ -35,9 +35,9 @@ RPG label for money, in any state — earned, owed or paid.
 _Avoid_: Bounty
 
 **Rate**:
-The amount billed per hour of work.
+The amount billed per hour of work. Every client has one; a project may override it. A time entry's rate is its project's rate if set, else its client's. Until a time entry is on an invoice its rate is live — changing a client or project rate reprices its uninvoiced time; once invoiced, the rate is frozen on the invoice. Every time entry is billable; work not to be charged goes on a project with a rate of zero.
 RPG label: "Gold/hr".
-_Avoid_: Bounty, wage, fee
+_Avoid_: Bounty, wage, fee, billable flag
 
 **Invoice**:
 A request for payment to one client, covering time entries over a period.
