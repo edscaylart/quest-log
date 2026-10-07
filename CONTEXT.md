@@ -15,6 +15,11 @@ _Avoid_: Quest, guild
 An optional, finite piece of work under one client. A time entry may belong to a project of its client, or to none.
 RPG label: "Quest".
 
+**Client status**:
+Whether a client is Active or Archived. Archiving is a reversible filing choice: an archived client leaves the active list, and all its time entries, invoices and history remain. A client can be deleted only while none of its time entries are on an invoice; deleting it also deletes its projects and uninvoiced time entries.
+RPG label: Archived → "Retired".
+_Avoid_: Inactive, closed
+
 **Project status**:
 Whether a project is Active or Complete. A complete project leaves the active list; its time entries and history remain.
 RPG label: Complete → "Quest complete".
