@@ -71,3 +71,15 @@ RPG labels: Uninvoiced → "Unclaimed", Invoiced-unpaid → "Owed", Paid → "Tr
 A range of calendar days that hours and earnings are reported over. A time entry falls in a period when its date does, so the entry's work date — never its invoice or payment date — decides which period its Gold counts in. Weeks start on Monday.
 RPG label: none.
 _Avoid_: Billing cycle, window
+
+### Progress
+
+**XP**:
+Experience the freelancer has gained, earned from Hours only — never from Gold, so unpaid work counts the same. It is always worked out from the current time entries, so editing or deleting an entry changes it.
+RPG label: "XP".
+_Avoid_: Points, score
+
+**Level**:
+The freelancer's single overall rank, set by total XP. There is one Level for the freelancer, not one per client or project. It can fall if time entries are removed. Only reaching a new highest Level is celebrated, with a level-up shown in the app; regaining a Level already reached is not.
+RPG label: "Lv".
+_Avoid_: Rank, tier
