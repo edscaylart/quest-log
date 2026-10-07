@@ -64,3 +64,10 @@ RPG labels: Draft → "Unsealed", Sent → "Sealed", Paid → "Redeemed".
 **Earnings**:
 Gold from time entries, split by where it stands in billing: Uninvoiced (not on a Sent or Paid invoice — Drafts included), Invoiced-unpaid (on a Sent invoice), Paid (on a Paid invoice).
 RPG labels: Uninvoiced → "Unclaimed", Invoiced-unpaid → "Owed", Paid → "Treasury".
+
+### Reporting
+
+**Period**:
+A range of calendar days that hours and earnings are reported over. A time entry falls in a period when its date does, so the entry's work date — never its invoice or payment date — decides which period its Gold counts in. Weeks start on Monday.
+RPG label: none.
+_Avoid_: Billing cycle, window
