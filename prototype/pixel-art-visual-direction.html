@@ -11,11 +11,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>PROTOTYPE · Quest Log visual direction</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&family=Silkscreen:wght@400;700&family=Pixelify+Sans:wght@400;600&family=Jersey+10&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;700&family=Alegreya:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { height: 100%; }
-  body { image-rendering: pixelated; -webkit-font-smoothing: none; }
+  body { font-variant-numeric: tabular-nums; }
   svg.px { shape-rendering: crispEdges; display: inline-block; vertical-align: middle; flex: none; }
   button { font: inherit; color: inherit; cursor: pointer; }
   #app { min-height: 100vh; padding-bottom: 80px; }
@@ -34,31 +34,31 @@
      ===================================================================== */
   .va { --bg:#0a0a1e; --win1:#2b3aa8; --win2:#0d1660; --edge:#ffffff; --edge2:#7c86c8; --ink:#ffffff; --dim:#a9b0e0;
         --gold:#ffd84a; --hp:#5cf07a; --mp:#4ac8ff; --red:#ff5a5a;
-        font-family: 'Press Start 2P', monospace; font-size: 10px; line-height: 1.9; color: var(--ink);
+        font-family: 'Rubik', sans-serif; font-size: 14px; line-height: 1.5; color: var(--ink);
         background: radial-gradient(#ffffff22 1px, transparent 1px) 0 0/24px 24px, var(--bg); min-height: 100vh; }
   .va .shell { max-width: 1120px; margin: 0 auto; padding: 24px; display: grid; grid-template-columns: 210px 1fr; grid-template-rows: auto 1fr auto; gap: 12px; min-height: calc(100vh - 80px); }
   .va .win { background: linear-gradient(var(--win1), var(--win2)); border: 3px solid var(--edge); border-radius: 7px;
              box-shadow: inset 0 0 0 2px var(--edge2), 0 0 0 2px #000; padding: 14px 16px; }
   .va .cmd { grid-row: 1 / 3; }
-  .va .cmd h1 { font-size: 11px; color: var(--gold); margin-bottom: 12px; }
+  .va .cmd h1 { font-size: 16px; font-weight: 700; color: var(--gold); margin-bottom: 12px; }
   .va .cmd button { display: flex; width: 100%; gap: 8px; align-items: center; background: none; border: 0; padding: 6px 0 6px 20px; text-align: left; position: relative; }
   .va .cmd button.on::before { content: '▶'; position: absolute; left: 0; animation: va-blink 1s steps(2) infinite; }
   .va .cmd hr { border: 0; border-top: 2px dotted var(--edge2); margin: 10px 0; }
-  .va .cmd .meta { color: var(--dim); font-size: 9px; }
+  .va .cmd .meta { color: var(--dim); font-size: 12px; }
   @keyframes va-blink { 50% { opacity: 0; } }
   .va .top { display: flex; gap: 12px; }
   .va .top .win { padding: 8px 14px; }
   .va .top .grow { flex: 1; }
   .va .gold { color: var(--gold); }
   .va .dim { color: var(--dim); }
-  .va .main h2 { font-size: 12px; margin-bottom: 14px; color: var(--gold); }
+  .va .main h2 { font-size: 16px; font-weight: 700; letter-spacing: 1px; margin-bottom: 14px; color: var(--gold); }
   .va .msg { grid-column: 1 / -1; display: flex; align-items: center; gap: 14px; }
-  .va .msg .t { font-size: 14px; color: var(--hp); }
+  .va .msg .t { font-size: 18px; font-weight: 700; color: var(--hp); }
   .va .row { display: grid; grid-template-columns: 18px 1fr 120px 110px 90px; gap: 10px; padding: 7px 4px; align-items: center; }
-  .va .row.head { color: var(--dim); font-size: 8px; border-bottom: 2px dotted var(--edge2); }
+  .va .row.head { color: var(--dim); font-size: 11px; font-weight: 500; border-bottom: 2px dotted var(--edge2); }
   .va .row.sel { background: #ffffff22; outline: 2px solid var(--edge); }
   .va .row .r { text-align: right; }
-  .va .tag { display: inline-block; padding: 0 6px; border: 2px solid currentColor; font-size: 8px; line-height: 1.8; }
+  .va .tag { display: inline-block; padding: 0 6px; border: 2px solid currentColor; font-size: 11px; font-weight: 500; line-height: 1.6; }
   .va .bar { height: 10px; background: #000; border: 2px solid var(--edge); position: relative; }
   .va .bar i { position: absolute; inset: 0 auto 0 0; background: linear-gradient(var(--hp), #1d9a3a); }
   .va .bar.mp i { background: linear-gradient(var(--mp), #1a6ab0); }
@@ -67,7 +67,7 @@
   .va .btn:hover::before, .va .btn.on::before { content: '▶'; position: absolute; left: 0; }
   .va .btn.danger { color: var(--red); }
   .va .btn[disabled] { color: #6870a8; cursor: default; }
-  .va .bigtime { font-size: 46px; line-height: 1.3; letter-spacing: 2px; text-align: center; margin: 22px 0 10px; text-shadow: 4px 4px 0 #000; }
+  .va .bigtime { font-size: 72px; font-weight: 700; line-height: 1.3; letter-spacing: 2px; text-align: center; margin: 22px 0 10px; text-shadow: 4px 4px 0 #000; }
   .va .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   .va .stat { display: grid; grid-template-columns: 110px 1fr; gap: 6px 12px; align-items: center; }
   .va .party { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 12px; }
@@ -78,43 +78,43 @@
      VARIANT B — Handheld (4-shade DMG green, HUD + bottom tab bar)
      ===================================================================== */
   .vb { --c0:#0f380f; --c1:#306230; --c2:#8bac0f; --c3:#9bbc0f;
-        font-family: 'Silkscreen', monospace; font-size: 13px; line-height: 1.5; color: var(--c0); background: var(--c1); min-height: 100vh; }
+        font-family: 'IBM Plex Mono', monospace; font-size: 14px; line-height: 1.5; color: var(--c0); background: var(--c1); min-height: 100vh; }
   .vb .device { max-width: 760px; margin: 0 auto; padding: 20px 20px 0; }
   .vb .screen { background: var(--c3); border: 4px solid var(--c0); box-shadow: 0 0 0 8px #8b8b9a, 0 0 0 12px #55556a; min-height: calc(100vh - 140px); display: flex; flex-direction: column; }
   .vb .hud { display: flex; align-items: center; gap: 12px; padding: 8px 12px; background: var(--c0); color: var(--c3); }
-  .vb .hud .t { font-family: 'VT323', monospace; font-size: 28px; line-height: 1; }
+  .vb .hud .t { font-size: 18px; font-weight: 700; line-height: 1; }
   .vb .hud .sp { flex: 1; }
   .vb .body { flex: 1; padding: 14px; }
   .vb .tabs { display: grid; grid-template-columns: repeat(4, 1fr); border-top: 4px solid var(--c0); }
-  .vb .tabs button { background: var(--c2); border: 0; border-right: 4px solid var(--c0); padding: 8px 0 6px; display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 11px; }
+  .vb .tabs button { background: var(--c2); border: 0; border-right: 4px solid var(--c0); padding: 8px 0 6px; display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 12px; font-weight: 500; }
   .vb .tabs button:last-child { border-right: 0; }
   .vb .tabs button.on { background: var(--c0); color: var(--c3); }
   .vb h2 { font-size: 15px; font-weight: 700; margin-bottom: 10px; display: flex; gap: 8px; align-items: center; }
   .vb .dither { background: repeating-conic-gradient(var(--c1) 0 25%, var(--c2) 0 50%) 0 0/4px 4px; }
   .vb .list > div { display: flex; align-items: center; gap: 12px; padding: 10px; border: 4px solid var(--c0); margin-bottom: -4px; background: var(--c3); }
   .vb .list > div.done { background: var(--c2); }
-  .vb .list .n { font-family: 'VT323', monospace; font-size: 24px; line-height: 1; }
+  .vb .list .n { font-size: 18px; font-weight: 700; line-height: 1; }
   .vb .list .grow { flex: 1; }
-  .vb .small { font-size: 10px; }
-  .vb .num { font-family: 'VT323', monospace; font-size: 22px; line-height: 1; }
+  .vb .small { font-size: 12px; }
+  .vb .num { font-size: 18px; font-weight: 700; line-height: 1.2; }
   .vb .btn { background: var(--c0); color: var(--c3); border: 0; padding: 8px 14px; box-shadow: 4px 4px 0 var(--c1); display: inline-flex; gap: 6px; align-items: center; }
   .vb .btn:active { transform: translate(4px,4px); box-shadow: none; }
   .vb .btn.ghost { background: var(--c3); color: var(--c0); outline: 4px solid var(--c0); outline-offset: -4px; }
   .vb .btn[disabled] { background: var(--c2); color: var(--c1); box-shadow: none; }
-  .vb .lcd { font-family: 'VT323', monospace; font-size: 120px; line-height: .9; text-align: center; padding: 20px 0 10px; letter-spacing: 4px; }
+  .vb .lcd { font-size: 88px; font-weight: 700; line-height: 1; text-align: center; padding: 20px 0 10px; letter-spacing: 4px; }
   .vb .lcd .colon { animation: vb-blink 1s steps(2) infinite; }
   @keyframes vb-blink { 50% { opacity: .15; } }
   .vb .chart { display: flex; align-items: flex-end; gap: 8px; height: 140px; border-bottom: 4px solid var(--c0); padding: 0 4px; }
   .vb .chart div { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; height: 100%; }
   .vb .chart i { width: 100%; background: var(--c0); display: block; }
   .vb .chart i.now { background: repeating-conic-gradient(var(--c0) 0 25%, var(--c1) 0 50%) 0 0/4px 4px; }
-  .vb .days { display: flex; gap: 8px; padding: 2px 4px 0; font-size: 10px; }
+  .vb .days { display: flex; gap: 8px; padding: 2px 4px 0; font-size: 12px; }
   .vb .days span { flex: 1; text-align: center; }
   .vb .tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 14px 0; }
   .vb .tiles > div { border: 4px solid var(--c0); padding: 6px 8px; }
   .vb .tiles > div.inv { background: var(--c0); color: var(--c3); }
   .vb .seg { display: inline-flex; border: 4px solid var(--c0); }
-  .vb .seg button { border: 0; background: none; padding: 2px 10px; font-size: 11px; }
+  .vb .seg button { border: 0; background: none; padding: 2px 10px; font-size: 12px; font-weight: 500; }
   .vb .seg button.on { background: var(--c0); color: var(--c3); }
   .vb input { font: inherit; background: var(--c3); border: 4px solid var(--c0); padding: 6px 8px; width: 100%; color: var(--c0); }
   .vb .swatch { width: 56px; height: 56px; border: 4px solid var(--c0); }
@@ -124,18 +124,18 @@
      ===================================================================== */
   .vc { --wood:#5a3519; --wood2:#7a4a24; --wood3:#a0652f; --parch:#f2e2b6; --parch2:#e3cb8f; --ink:#3b2412; --ink2:#7d5a36;
         --wax:#a3242a; --gold:#e0a417; --moss:#4f7a2b; --cork:#b98a52;
-        font-family: 'Pixelify Sans', sans-serif; font-size: 15px; line-height: 1.45; color: var(--ink);
+        font-family: 'Alegreya', serif; font-size: 16px; line-height: 1.45; color: var(--ink);
         background: repeating-linear-gradient(0deg, var(--wood) 0 22px, #4d2d14 22px 24px), var(--wood); min-height: 100vh; }
   .vc .notch { clip-path: polygon(0 6px, 6px 6px, 6px 0, calc(100% - 6px) 0, calc(100% - 6px) 6px, 100% 6px, 100% calc(100% - 6px), calc(100% - 6px) calc(100% - 6px), calc(100% - 6px) 100%, 6px 100%, 6px calc(100% - 6px), 0 calc(100% - 6px)); }
   .vc .wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px 24px; }
   .vc nav { display: flex; gap: 18px; align-items: flex-start; padding-bottom: 18px; }
-  .vc nav .sign { background: var(--wood3); color: var(--parch); border: 0; font-family: 'Jersey 10', sans-serif; font-size: 26px; padding: 26px 18px 6px; position: relative; box-shadow: inset 0 -4px 0 var(--wood), 4px 4px 0 #0006; display: flex; gap: 8px; align-items: center; }
+  .vc nav .sign { background: var(--wood3); color: var(--parch); border: 0; font-size: 18px; font-weight: 700; padding: 26px 18px 6px; position: relative; box-shadow: inset 0 -4px 0 var(--wood), 4px 4px 0 #0006; display: flex; gap: 8px; align-items: center; }
   .vc nav .sign.on { background: var(--parch); color: var(--ink); padding-top: 34px; }
-  .vc nav .brand { font-family: 'Jersey 10', sans-serif; font-size: 40px; color: var(--gold); text-shadow: 3px 3px 0 #000; padding-top: 14px; margin-right: auto; }
+  .vc nav .brand { font-size: 30px; font-weight: 700; color: var(--gold); text-shadow: 3px 3px 0 #000; padding-top: 14px; margin-right: auto; }
   .vc nav .purse { margin-left: auto; padding-top: 22px; color: var(--parch); display: flex; gap: 8px; align-items: center; font-size: 18px; }
   .vc .parch { background: var(--parch); box-shadow: inset 0 0 0 4px var(--parch2); padding: 18px 20px; }
-  .vc h2 { font-family: 'Jersey 10', sans-serif; font-size: 34px; font-weight: 400; line-height: 1; margin-bottom: 12px; }
-  .vc h3 { font-family: 'Jersey 10', sans-serif; font-size: 24px; font-weight: 400; line-height: 1; }
+  .vc h2 { font-size: 26px; font-weight: 700; line-height: 1.1; margin-bottom: 12px; }
+  .vc h3 { font-size: 19px; font-weight: 700; line-height: 1.2; }
   .vc .muted { color: var(--ink2); }
   .vc .board { background: var(--cork); background-image: radial-gradient(#7a5a30 1.5px, transparent 1.5px), radial-gradient(#d6a868 1px, transparent 1px); background-size: 9px 9px, 13px 13px; padding: 22px; border: 8px solid var(--wood2); box-shadow: inset 0 0 0 4px var(--wood); }
   .vc .board-head { display: flex; justify-content: space-between; align-items: end; margin-bottom: 14px; color: var(--parch); }
@@ -145,14 +145,14 @@
   .vc .note:nth-child(3n+1) { transform: rotate(-1.5deg); } .vc .note:nth-child(3n+2) { transform: rotate(1deg); }
   .vc .note::before { content: ''; position: absolute; top: 6px; left: 50%; width: 10px; height: 10px; margin-left: -5px; background: var(--wax); box-shadow: 2px 2px 0 #0006; }
   .vc .note.done { background: var(--parch2); }
-  .vc .note .stamp { position: absolute; right: 10px; bottom: 10px; transform: rotate(-12deg); color: var(--moss); border: 3px solid var(--moss); padding: 0 6px; font-family: 'Jersey 10', sans-serif; font-size: 20px; }
+  .vc .note .stamp { position: absolute; right: 10px; bottom: 10px; transform: rotate(-12deg); color: var(--moss); border: 3px solid var(--moss); padding: 0 6px; font-size: 15px; font-weight: 700; }
   .vc .kv { display: flex; justify-content: space-between; border-bottom: 2px dashed var(--parch2); padding: 3px 0; }
   .vc .btn { background: var(--wood2); color: var(--parch); border: 0; padding: 8px 16px; box-shadow: inset 0 -4px 0 var(--wood), inset 0 4px 0 var(--wood3); display: inline-flex; gap: 8px; align-items: center; font-size: 16px; }
   .vc .btn.wax { background: var(--wax); box-shadow: inset 0 -4px 0 #6d1418, inset 0 4px 0 #c94a4f; }
   .vc .btn.paper { background: var(--parch2); color: var(--ink); box-shadow: inset 0 -4px 0 var(--ink2); }
   .vc .btn[disabled] { background: #b8a888; color: #806d55; box-shadow: none; cursor: default; }
   .vc .timer { display: grid; grid-template-columns: 1fr 340px; gap: 22px; }
-  .vc .hourglass { font-family: 'Jersey 10', sans-serif; font-size: 110px; line-height: 1; text-align: center; margin: 16px 0; }
+  .vc .hourglass { font-size: 80px; font-weight: 700; line-height: 1; text-align: center; margin: 16px 0; }
   .vc .candle { height: 16px; background: var(--parch2); box-shadow: inset 0 0 0 3px var(--ink2); position: relative; }
   .vc .candle i { position: absolute; inset: 3px auto 3px 3px; background: var(--gold); }
   .vc .book { display: grid; grid-template-columns: 1fr 1fr; background: var(--parch); box-shadow: 0 0 0 8px var(--wax), 0 0 0 12px #6d1418, 8px 8px 0 12px #0007; margin-top: 8px; }
@@ -319,7 +319,7 @@ const A = {
         size: 24,
         panel: (t, b) => `<div class="win"><h2>${t}</h2>${b}</div>`,
         palette: [['window', '#2b3aa8'], ['window lo', '#0d1660'], ['edge', '#ffffff'], ['edge in', '#7c86c8'], ['gold', '#ffd84a'], ['hp/ok', '#5cf07a'], ['mp/info', '#4ac8ff'], ['danger', '#ff5a5a']],
-        fonts: `<div style="font-size:16px">Press Start 2P</div><div>QUEST COMPLETE! 1,234.50 G</div><div class="dim" style="font-size:9px">Everything is set in one font. Readable at 10px+, tiring for long notes.</div>`,
+        fonts: `<div style="font-size:22px;font-weight:700">Rubik</div><div>Quest complete! 1,234.50 G · 1:23:45</div><div class="dim">One rounded sans for everything. Pixel feel comes from windows, borders and icons, not type.</div>`,
         buttons: `<button class="btn on">Selected</button><button class="btn">Command</button><button class="btn danger">Discard</button><button class="btn" disabled>Disabled</button>`,
         input: `<input value="Chart tooltips">`,
         badges: `<span class="tag" style="color:var(--dim)">UNSEALED</span><span class="tag gold">SEALED</span><span class="tag" style="color:var(--hp)">REDEEMED</span><span class="tag">${icon('lock', 8)} LOCKED</span>`,
@@ -376,7 +376,7 @@ const B = {
         size: 32,
         panel: (t, b) => `<div style="border:4px solid var(--c0);padding:10px"><h2>${t.toUpperCase()}</h2>${b}</div>`,
         palette: [['c0 ink', '#0f380f'], ['c1 dark', '#306230'], ['c2 light', '#8bac0f'], ['c3 paper', '#9bbc0f']],
-        fonts: `<div>SILKSCREEN — LABELS, CAPS ONLY</div><div class="num" style="font-size:40px">VT323 1:23:45 · 1,234.50</div><div class="small">Two fonts: Silkscreen for UI chrome, VT323 for numbers & notes. 4 colours, no exceptions.</div>`,
+        fonts: `<div style="font-size:22px;font-weight:700">IBM Plex Mono</div><div class="num" style="font-size:32px">1:23:45 · 1,234.50</div><div class="small">One monospace, weights 400/500/700. Digits line up for free. 4 colours, no exceptions.</div>`,
         buttons: `<button class="btn">${icon('play', 12)} START</button><button class="btn ghost">GHOST</button><button class="btn" disabled>DISABLED</button>`,
         input: `<input value="CHART TOOLTIPS">`,
         badges: `<span class="seg"><button class="on">UNSEALED</button><button>SEALED</button><button>REDEEMED</button></span><span>${icon('lock', 14)} LOCKED</span>`,
@@ -384,7 +384,7 @@ const B = {
     }[screen]();
     return `<div class="vb"><div class="device"><div class="screen">
       <div class="hud">${icon('timer', 18)}<span class="t" data-live="hms">${hms(elapsed())}</span><span class="small">${timer.quest.toUpperCase()}</span>
-        <button class="btn ghost" style="padding:2px 8px;font-size:10px">STOP</button><span class="sp"></span>
+        <button class="btn ghost" style="padding:2px 8px;font-size:12px">STOP</button><span class="sp"></span>
         ${icon('star', 14)}<span class="small">LV${level.lv}</span>${icon('coin', 14)}<span class="t" data-live="unclaimed">${g(unclaimed())}</span></div>
       <div class="body">${body}</div>
       <div class="tabs">${this.screens.map(([k, l, ic]) => `<button data-screen="${k}" class="${k === screen ? 'on' : ''}">${icon(ic, 20)}${l.toUpperCase()}</button>`).join('')}</div>
@@ -438,7 +438,7 @@ const C = {
         size: 32,
         panel: (t, b) => `<div class="parch notch"><h3 style="margin-bottom:8px">${t}</h3>${b}</div>`,
         palette: [['wood', '#5a3519'], ['wood hi', '#a0652f'], ['parchment', '#f2e2b6'], ['parch shade', '#e3cb8f'], ['ink', '#3b2412'], ['wax', '#a3242a'], ['gold', '#e0a417'], ['moss', '#4f7a2b']],
-        fonts: `<h2>Jersey 10 — headings</h2><div>Pixelify Sans — body, notes and numbers. 1,234.50 Gold · 1:23:45</div><div class="muted">Mixed-case, reads well at 14px+. Stepped "notch" corners via clip-path.</div>`,
+        fonts: `<h2>Alegreya — headings</h2><div>Alegreya — body, notes and numbers. 1,234.50 Gold · 1:23:45</div><div class="muted">Bookish serif, fits the ledger. Pixel feel comes from stepped "notch" corners, icons and textures.</div>`,
         buttons: `<button class="btn notch">Primary</button><button class="btn wax notch">Wax / danger</button><button class="btn paper notch">Paper</button><button class="btn notch" disabled>Disabled</button>`,
         input: `<input value="Chart tooltips">`,
         badges: `${seal('Unsealed')}${seal('Sealed')}${seal('Redeemed')}<span class="muted">${icon('lock', 14)} Locked</span>`,
