@@ -79,7 +79,7 @@ pub async fn get_timer(db: &Db) -> Result<Option<Timer>> {
 /// Starts the Timer. A running one is stopped first, and what that did is
 /// returned; if it needs editing, the new Timer does not start.
 pub async fn start_timer(db: &Db, clock: &dyn Clock, input: TimerStart) -> Result<Option<Stopped>> {
-    require_client(db, input.client_id).await?;
+    require_client(db, input.client_id, false).await?;
     require_project(db, input.client_id, input.project_id, None).await?;
     let previous = match get_timer(db).await? {
         Some(_) => Some(stop_timer(db, clock).await?),
@@ -138,7 +138,7 @@ pub async fn stop_timer(db: &Db, clock: &dyn Clock) -> Result<Stopped> {
 /// Changes the client, project and note; the start may only move earlier.
 pub async fn update_timer(db: &Db, clock: &dyn Clock, input: TimerEdit) -> Result<Timer> {
     let timer = get_timer(db).await?.ok_or_else(not_running)?;
-    require_client(db, input.client_id).await?;
+    require_client(db, input.client_id, input.client_id == timer.client_id).await?;
     require_project(db, input.client_id, input.project_id, timer.project_id).await?;
     let started_at = match input.start.as_deref().map(str::trim) {
         None => timer.started_at,
@@ -170,7 +170,7 @@ pub async fn update_timer(db: &Db, clock: &dyn Clock, input: TimerEdit) -> Resul
 /// under the usual entry rules, and clears the Timer.
 pub async fn finish_timer(db: &Db, clock: &dyn Clock, input: EntryInput) -> Result<TimeEntry> {
     let timer = get_timer(db).await?.ok_or_else(not_running)?;
-    let v = validate(db, clock, &input, timer.project_id).await?;
+    let v = validate(db, clock, &input, Some(timer.client_id), timer.project_id).await?;
     save_and_clear(db, clock, input.client_id, v).await
 }
 

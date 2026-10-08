@@ -54,7 +54,9 @@ export function Hud({
   onError: (err: unknown) => void;
   onSettings: () => void;
 }) {
-  const [clients, setClients] = useState<Client[]>([]);
+  const [allClients, setClients] = useState<Client[]>([]);
+  // Retired clients take no new Timers; a running one keeps its own.
+  const clients = allClients.filter((c) => !c.archived);
   const [starting, setStarting] = useState(false);
   const [editing, setEditing] = useState(false);
 
@@ -73,13 +75,13 @@ export function Hud({
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [timer, clients]);
+  }, [timer, clients.length]);
 
   // Tray Start with no last-used client lands here.
   useEffect(() => {
     const unlisten = listen("tray-start", () => clients.length && setStarting(true));
     return () => void unlisten.then((f) => f());
-  }, [clients]);
+  }, [clients.length]);
 
   return (
     <header className="hud">
@@ -114,7 +116,7 @@ export function Hud({
       {editing && timer && (
         <EditModal
           timer={timer}
-          clients={clients}
+          clients={allClients.filter((c) => !c.archived || c.id === timer.clientId)}
           onClose={() => setEditing(false)}
           onSaved={() => {
             setEditing(false);

@@ -68,11 +68,24 @@ export function Log({
           onChange={(e) => setClientId(e.target.value ? Number(e.target.value) : null)}
         >
           <option value="">{label.allClients}</option>
-          {clients.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
+          {clients
+            .filter((c) => !c.archived)
+            .map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          {clients.some((c) => c.archived) && (
+            <optgroup label={label.archived}>
+              {clients
+                .filter((c) => c.archived)
+                .map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+            </optgroup>
+          )}
         </select>
         <button className="primary" aria-label="New time entry" onClick={() => setCreating(true)}>
           +
@@ -181,7 +194,9 @@ export function EntryModal({
   const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   useEffect(() => {
-    Promise.all([listClients(), initial ? null : lastUsed()]).then(([list, last]) => {
+    Promise.all([listClients(), initial ? null : lastUsed()]).then(([all, last]) => {
+      // Retired clients take no new entries; an entry keeps its own.
+      const list = all.filter((c) => !c.archived || c.id === initial?.clientId);
       setClients(list);
       if (initial) return;
       const known = list.some((c) => c.id === last?.clientId);

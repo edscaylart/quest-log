@@ -4,7 +4,7 @@ import App from "./App";
 import type { Client, DraftCandidates, Invoice, InvoiceSummary, TimeEntry } from "./api";
 import { emptyDashboard, renderWithIpc } from "./test/render";
 
-const client = (id: number, name: string): Client => ({ id, name, rateCents: 8500, billingName: null, address: null, email: null, netDays: null });
+const client = (id: number, name: string): Client => ({ id, name, rateCents: 8500, billingName: null, address: null, email: null, netDays: null, archived: false, hasAvailable: false });
 const acme = client(1, "Acme");
 const bolt = client(2, "Bolt");
 
@@ -53,11 +53,11 @@ const draft = (fields: Partial<Invoice> = {}): Invoice => ({
   ...fields,
 });
 
-function fakeCore({ invoices = [] as InvoiceSummary[], invoice = draft() } = {}) {
+function fakeCore({ invoices = [] as InvoiceSummary[], invoice = draft(), clients = [acme, bolt] } = {}) {
   let current = invoice;
   let list = invoices;
   return {
-    list_clients: () => [acme, bolt],
+    list_clients: () => clients,
     get_timer: () => null,
     dashboard: emptyDashboard,
     list_time_entries: () => [],
@@ -166,6 +166,15 @@ describe("Scrolls", () => {
     });
     expect(await screen.findByRole("heading", { name: "Unsealed Scroll · Acme" })).toBeInTheDocument();
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("offers a Retired Patron only while it has Unclaimed time, tagged Retired", async () => {
+    const retired = (id: number, name: string, hasAvailable: boolean) => ({ ...client(id, name), archived: true, hasAvailable });
+    const { user } = await openScrolls(fakeCore({ clients: [acme, retired(2, "Bolt", true), retired(3, "Cog", false)] }));
+    await user.click(screen.getByRole("button", { name: "+ New Scroll" }));
+
+    const picker = within(await screen.findByRole("dialog", { name: "New Scroll" })).getByLabelText("Patron");
+    await waitFor(() => expect(within(picker).getAllByRole("option").map((o) => o.textContent)).toEqual(["Acme", "Bolt (Retired)"]));
   });
 
   it("offers to include older uninvoiced entries", async () => {

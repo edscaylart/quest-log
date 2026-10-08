@@ -15,7 +15,7 @@ import {
   type Repricing,
   type TimeEntry,
 } from "./api";
-import { formatCents } from "./format";
+import { formatCents, formatHours } from "./format";
 import { label } from "./labels";
 import { RecentEntries } from "./Log";
 import { Field, Modal, RepriceConfirm, reprices } from "./Modal";
@@ -100,7 +100,12 @@ export function ProjectDetail({
       )}
       {deleting && (
         <Modal title={`Delete ${label.project}?`} onClose={() => setDeleting(false)}>
-          <p>{project.name}. This can't be undone.</p>
+          <p>
+            {project.name}
+            {entries.length > 0 &&
+              `: ${entries.length} time ${entries.length === 1 ? "entry" : "entries"} and ${formatHours(entries.reduce((sum, e) => sum + e.seconds, 0))} hours go with it`}
+            . This can't be undone.
+          </p>
           <div className="actions">
             <button type="button" className="ghost" onClick={() => setDeleting(false)}>
               Cancel

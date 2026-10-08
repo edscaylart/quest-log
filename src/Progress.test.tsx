@@ -4,7 +4,7 @@ import App from "./App";
 import type { Progress, Stopped, Timer } from "./api";
 import { emptyDashboard, renderWithIpc } from "./test/render";
 
-const acme = { id: 1, name: "Acme", rateCents: 8500, billingName: null, address: null, email: null, netDays: null };
+const acme = { id: 1, name: "Acme", rateCents: 8500, billingName: null, address: null, email: null, netDays: null, archived: false, hasAvailable: false };
 const lv2: Progress = { level: 2, xp: 900, levelXp: 600, nextLevelXp: 1800, levelUp: null };
 const running: Timer = { clientId: 1, clientName: "Acme", projectId: null, projectName: null, startedAt: Date.now(), note: null };
 

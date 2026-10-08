@@ -229,7 +229,8 @@ async fn default_start(db: &Db, client_id: i64) -> Result<Option<NaiveDate>> {
 
 /// Entries go on the Draft only if they are the client's and on no invoice.
 pub async fn create_draft(db: &Db, clock: &dyn Clock, input: NewDraft) -> Result<Invoice> {
-    require_client(db, input.client_id).await?;
+    // An archived client's leftover time can still be billed.
+    require_client(db, input.client_id, true).await?;
     let custom = PeriodInput {
         preset: Preset::Custom,
         offset: 0,

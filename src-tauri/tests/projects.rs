@@ -6,7 +6,7 @@ use quest_log_lib::core::clients::{
     Repricing,
 };
 use quest_log_lib::core::projects::{
-    create_project, delete_project, list_projects, preview_project_rate, set_project_complete,
+    create_project, list_projects, preview_project_rate, set_project_complete,
     update_project, Project, ProjectInput,
 };
 use quest_log_lib::core::time_entries::{
@@ -366,20 +366,6 @@ async fn quest_name_is_required_and_rate_must_be_valid() {
         .await
         .unwrap_err();
     assert!(matches!(err, CoreError::NotFound { .. }), "{err:?}");
-}
-
-#[tokio::test]
-async fn only_a_quest_without_time_can_be_deleted() {
-    let f = Fixture::new().await;
-    let acme = client(&f, "Acme", "85").await;
-    let empty = project(&f, acme.id, "Empty", "").await;
-    let used = project(&f, acme.id, "Used", "").await;
-    log(&f, acme.id, Some(used.id), "1").await;
-
-    delete_project(&f.db, empty.id).await.unwrap();
-    let err = delete_project(&f.db, used.id).await.unwrap_err();
-    assert_eq!(invalid_field(err), "project");
-    assert_eq!(list_projects(&f.db, acme.id).await.unwrap().len(), 1);
 }
 
 #[tokio::test]

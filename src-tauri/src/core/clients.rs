@@ -21,6 +21,10 @@ pub struct Client {
     pub email: Option<String>,
     /// Payment terms override; `None` uses the default.
     pub net_days: Option<i64>,
+    /// Out of the pickers and closed to new work; its history stays.
+    pub archived: bool,
+    /// Has time entries on no invoice, so a new Draft has something to hold.
+    pub has_available: bool,
 }
 
 /// Every editable field of a client, as typed in the edit form.
@@ -63,8 +67,9 @@ pub async fn create_client(db: &Db, clock: &dyn Clock, input: NewClient) -> Resu
     get_client(db, id).await
 }
 
-const SELECT: &str =
-    "SELECT id, name, rate_cents, billing_name, address, email, net_days FROM clients";
+const SELECT: &str = "SELECT id, name, rate_cents, billing_name, address, email, net_days, archived, \
+    EXISTS (SELECT 1 FROM time_entries e WHERE e.client_id = clients.id AND e.invoice_id IS NULL) AS has_available \
+    FROM clients";
 
 pub async fn list_clients(db: &Db) -> Result<Vec<Client>> {
     Ok(
@@ -113,6 +118,75 @@ pub async fn update_client(db: &Db, id: i64, input: ClientEdit) -> Result<Client
         return Err(not_found());
     }
     get_client(db, id).await
+}
+
+/// Reversible, allowed any time; a running Timer keeps running and saves normally.
+pub async fn set_client_archived(db: &Db, id: i64, archived: bool) -> Result<Client> {
+    let updated = sqlx::query("UPDATE clients SET archived = ? WHERE id = ?")
+        .bind(archived)
+        .bind(id)
+        .execute(db)
+        .await?
+        .rows_affected();
+    if updated == 0 {
+        return Err(not_found());
+    }
+    get_client(db, id).await
+}
+
+/// What deleting a client would remove, for the confirm.
+#[derive(Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ClientDeletion {
+    pub projects: i64,
+    pub entries: i64,
+    pub seconds: i64,
+}
+
+/// Fails as [`delete_client`] would if any of its entries is on an invoice.
+pub async fn client_deletion(db: &Db, id: i64) -> Result<ClientDeletion> {
+    get_client(db, id).await?;
+    let (entries, seconds, invoiced): (i64, i64, bool) = sqlx::query_as(
+        "SELECT COUNT(*), COALESCE(SUM(seconds), 0), COUNT(invoice_id) > 0 \
+         FROM time_entries WHERE client_id = ?",
+    )
+    .bind(id)
+    .fetch_one(db)
+    .await?;
+    if invoiced {
+        return Err(invalid(
+            "client",
+            "This client has time on an invoice; archive it instead",
+        ));
+    }
+    let projects = sqlx::query_scalar("SELECT COUNT(*) FROM projects WHERE client_id = ?")
+        .bind(id)
+        .fetch_one(db)
+        .await?;
+    Ok(ClientDeletion {
+        projects,
+        entries,
+        seconds,
+    })
+}
+
+/// Permanent: removes its projects, time entries, running Timer and (empty)
+/// invoices. Only while none of its entries is on an invoice.
+pub async fn delete_client(db: &Db, id: i64) -> Result<()> {
+    client_deletion(db, id).await?;
+    let mut tx = db.begin().await?;
+    for table in ["timer", "time_entries", "invoices", "projects"] {
+        sqlx::query(&format!("DELETE FROM {table} WHERE client_id = ?"))
+            .bind(id)
+            .execute(&mut *tx)
+            .await?;
+    }
+    sqlx::query("DELETE FROM clients WHERE id = ?")
+        .bind(id)
+        .execute(&mut *tx)
+        .await?;
+    tx.commit().await?;
+    Ok(())
 }
 
 /// What changing the client's rate to `rate` would do to its uninvoiced time

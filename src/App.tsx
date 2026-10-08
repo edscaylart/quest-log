@@ -105,7 +105,16 @@ export default function App() {
         {top?.kind === "settings" ? (
           <SettingsScreen />
         ) : top?.kind === "client" ? (
-          <ClientDetail key={top.id} id={top.id} version={version} onChange={changed} />
+          <ClientDetail
+            key={top.id}
+            id={top.id}
+            version={version}
+            onChange={changed}
+            onDeleted={() => {
+              back();
+              changed();
+            }}
+          />
         ) : top?.kind === "project" ? (
           <ProjectDetail
             key={top.id}

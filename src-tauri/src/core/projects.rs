@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use super::clients::{get_client, parse_rate, repricing, Repricing};
-use super::time_entries::invalid;
+use super::time_entries::{invalid, require_client};
 use super::{Clock, CoreError, Db, Result};
 
 #[derive(Debug, Deserialize)]
@@ -32,6 +32,7 @@ pub async fn create_project(
     input: ProjectInput,
 ) -> Result<Project> {
     get_client(db, client_id).await?;
+    require_client(db, client_id, false).await?;
     let (name, rate_cents) = validate(&input)?;
     let id = sqlx::query(
         "INSERT INTO projects (client_id, name, rate_cents, created_at) VALUES (?, ?, ?, ?)",
@@ -76,31 +77,37 @@ pub async fn set_project_complete(db: &Db, id: i64, complete: bool) -> Result<Pr
     get_project(db, id).await
 }
 
-/// Only a project with no time entries can go; otherwise mark it complete.
-// ponytail: stricter than the spec's "none invoiced" so no entry is ever lost;
-// relax to deleting uninvoiced entries (with a counted confirm) if it's missed.
+/// Permanent: removes its time entries; a running Timer on it keeps running
+/// with no project. Only while none of its entries is on an invoice; otherwise
+/// mark it complete.
 pub async fn delete_project(db: &Db, id: i64) -> Result<()> {
-    let in_use: bool = sqlx::query_scalar(
-        "SELECT EXISTS (SELECT 1 FROM time_entries WHERE project_id = ?1) \
-         OR EXISTS (SELECT 1 FROM timer WHERE project_id = ?1)",
+    get_project(db, id).await?;
+    let invoiced: bool = sqlx::query_scalar(
+        "SELECT EXISTS (SELECT 1 FROM time_entries WHERE project_id = ? AND invoice_id IS NOT NULL)",
     )
     .bind(id)
     .fetch_one(db)
     .await?;
-    if in_use {
+    if invoiced {
         return Err(invalid(
             "project",
-            "This project has time logged; mark it complete instead",
+            "This project has time on an invoice; mark it complete instead",
         ));
     }
-    let deleted = sqlx::query("DELETE FROM projects WHERE id = ?")
+    let mut tx = db.begin().await?;
+    sqlx::query("UPDATE timer SET project_id = NULL WHERE project_id = ?")
         .bind(id)
-        .execute(db)
-        .await?
-        .rows_affected();
-    if deleted == 0 {
-        return Err(not_found());
-    }
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query("DELETE FROM time_entries WHERE project_id = ?")
+        .bind(id)
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query("DELETE FROM projects WHERE id = ?")
+        .bind(id)
+        .execute(&mut *tx)
+        .await?;
+    tx.commit().await?;
     Ok(())
 }
 

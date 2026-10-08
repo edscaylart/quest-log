@@ -21,7 +21,7 @@ RPG label: Archived → "Retired".
 _Avoid_: Inactive, closed
 
 **Project status**:
-Whether a project is Active or Complete. A complete project leaves the active list; its time entries and history remain.
+Whether a project is Active or Complete. A complete project leaves the active list; its time entries and history remain. A project can be deleted only while none of its time entries are on an invoice; deleting it also deletes its time entries.
 RPG label: Complete → "Quest complete".
 
 **Time entry**:

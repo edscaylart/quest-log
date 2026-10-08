@@ -112,7 +112,9 @@ export function NewDraftModal({ onClose, onCreated }: { onClose: () => void; onC
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    listClients().then((list) => {
+    listClients().then((all) => {
+      // A retired client only while it has time left to bill.
+      const list = all.filter((c) => !c.archived || c.hasAvailable);
       setClients(list);
       setClientId(list[0]?.id ?? 0);
     });
@@ -172,7 +174,7 @@ export function NewDraftModal({ onClose, onCreated }: { onClose: () => void; onC
             >
               {clients?.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.name}
+                  {c.archived ? `${c.name} (${label.archived})` : c.name}
                 </option>
               ))}
             </select>

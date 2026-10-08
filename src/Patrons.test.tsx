@@ -10,6 +10,8 @@ const client = (fields: Partial<Client> & Pick<Client, "id" | "name">): Client =
   address: null,
   email: null,
   netDays: null,
+  archived: false,
+  hasAvailable: false,
   ...fields,
 });
 const acme = client({ id: 1, name: "Acme", billingName: "Acme Corp LLC", address: "1 Main St", email: "ap@acme.test", netDays: 15 });
@@ -19,10 +21,24 @@ function fakeCore({
   projects = [] as Project[],
   entries = [] as TimeEntry[],
   repricing = { seconds: 45000, oldCents: 75000, newCents: 87500 },
+  clients: initialClients = [acme, bolt],
+  deletion = { projects: 2, entries: 3, seconds: 16200 } as unknown,
 } = {}) {
-  let clients = [acme, bolt];
+  let clients = initialClients;
   return {
     list_clients: () => clients,
+    set_client_archived: ({ id, archived }: Record<string, unknown>) => {
+      clients = clients.map((c) => (c.id === id ? { ...c, archived: archived as boolean } : c));
+      return clients.find((c) => c.id === id);
+    },
+    client_deletion: () => {
+      if (deletion instanceof Error) throw { kind: "invalid", field: "client", message: deletion.message };
+      return deletion;
+    },
+    delete_client: ({ id }: Record<string, unknown>) => {
+      clients = clients.filter((c) => c.id !== id);
+      return null;
+    },
     get_client: ({ id }: Record<string, unknown>) => clients.find((c) => c.id === id),
     update_client: ({ id, input }: Record<string, unknown>) => {
       const { name, rate } = input as { name: string; rate: string };
@@ -104,6 +120,82 @@ describe("navigation stacks", () => {
     await user.click(screen.getByRole("button", { name: "◀ Back" }));
     expect(screen.getByRole("heading", { name: "Patrons" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "◀ Back" })).not.toBeInTheDocument();
+  });
+});
+
+describe("Retired Patrons", () => {
+  const retiredBolt = { ...bolt, archived: true };
+
+  it("lists Active Patrons by default and Retired ones by toggle", async () => {
+    const { user } = renderWithIpc(<App />, fakeCore({ clients: [acme, retiredBolt] }));
+    await user.click(screen.getByRole("tab", { name: "Patrons" }));
+    const main = screen.getByRole("main");
+
+    expect(await within(main).findByRole("button", { name: /Acme/ })).toBeInTheDocument();
+    expect(within(main).queryByRole("button", { name: /Bolt/ })).not.toBeInTheDocument();
+    expect(within(main).getByRole("button", { name: "Active" })).toHaveAttribute("aria-pressed", "true");
+
+    await user.click(within(main).getByRole("button", { name: "Retired" }));
+    expect(within(main).getByRole("button", { name: /Bolt/ })).toBeInTheDocument();
+    expect(within(main).queryByRole("button", { name: /Acme/ })).not.toBeInTheDocument();
+  });
+
+  it("retires a Patron and brings it back", async () => {
+    const { user, calls } = await openAcme(fakeCore());
+
+    await user.click(screen.getByRole("button", { name: "Retire" }));
+    expect(calls).toContainEqual({ cmd: "set_client_archived", args: { id: 1, archived: true } });
+    expect(await screen.findByText("Retired")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "+ New Quest" })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Un-retire" }));
+    expect(calls).toContainEqual({ cmd: "set_client_archived", args: { id: 1, archived: false } });
+  });
+
+  it("deletes a Patron after confirming what goes with it", async () => {
+    const { user, calls } = await openAcme(fakeCore());
+
+    await user.click(screen.getByRole("button", { name: "Delete" }));
+    const dialog = await screen.findByRole("dialog", { name: "Delete Patron?" });
+    expect(dialog).toHaveTextContent("2 Quests, 3 time entries and 4.5 hours");
+    expect(calls.map((c) => c.cmd)).not.toContain("delete_client");
+    await user.click(within(dialog).getByRole("button", { name: "Delete" }));
+
+    expect(calls).toContainEqual({ cmd: "delete_client", args: { id: 1 } });
+    expect(await screen.findByRole("heading", { name: "Patrons" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Acme/ })).not.toBeInTheDocument();
+  });
+
+  it("explains why a Patron with invoiced time can't be deleted", async () => {
+    const { user } = await openAcme(fakeCore({ deletion: new Error("This client has time on an invoice; archive it instead") }));
+
+    await user.click(screen.getByRole("button", { name: "Delete" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("archive it instead");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("leaves Retired Patrons out of the Timer and entry pickers", async () => {
+    const { user } = renderWithIpc(<App />, fakeCore({ clients: [acme, retiredBolt] }));
+
+    await vi.waitFor(() => expect(screen.getByRole("button", { name: "▶ Start" })).toBeEnabled());
+    await user.click(screen.getByRole("button", { name: "▶ Start" }));
+    const start = screen.getByRole("dialog", { name: "Start Timer" });
+    expect(within(within(start).getByLabelText("Patron")).getAllByRole("option").map((o) => o.textContent)).toEqual(["Acme"]);
+    await user.click(within(start).getByRole("button", { name: "Cancel" }));
+
+    await user.keyboard("{Meta>}n{/Meta}");
+    const dialog = await screen.findByRole("dialog", { name: "New time entry" });
+    await vi.waitFor(() => expect(within(within(dialog).getByLabelText("Patron")).getAllByRole("option").map((o) => o.textContent)).toEqual(["Acme"]));
+  });
+
+  it("groups Retired Patrons at the bottom of the Log filter", async () => {
+    const { user } = renderWithIpc(<App />, fakeCore({ clients: [retiredBolt, acme] }));
+    await user.click(screen.getByRole("tab", { name: "Log" }));
+
+    const filter = screen.getByLabelText("Patron filter");
+    await vi.waitFor(() => expect(within(filter).getAllByRole("option").map((o) => o.textContent)).toEqual(["All Patrons", "Acme", "Bolt"]));
+    expect(within(filter).getByRole("group", { name: "Retired" })).toHaveTextContent("Bolt");
   });
 });
 

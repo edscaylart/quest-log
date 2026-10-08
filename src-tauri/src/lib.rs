@@ -3,7 +3,7 @@ mod tray;
 
 use tauri::{Manager, State};
 
-use crate::core::clients::{self, Client, ClientEdit, NewClient, Repricing};
+use crate::core::clients::{self, Client, ClientDeletion, ClientEdit, NewClient, Repricing};
 use crate::core::dashboard::{self, Dashboard, PeriodInput};
 use crate::core::invoices::{self, DraftCandidates, Invoice, InvoiceSummary, NewDraft};
 use crate::core::progress::{self, Progress};
@@ -42,6 +42,25 @@ async fn preview_client_rate(
     rate: String,
 ) -> Result<Repricing, CoreError> {
     clients::preview_client_rate(&db, id, &rate).await
+}
+
+#[tauri::command]
+async fn set_client_archived(
+    db: State<'_, Db>,
+    id: i64,
+    archived: bool,
+) -> Result<Client, CoreError> {
+    clients::set_client_archived(&db, id, archived).await
+}
+
+#[tauri::command]
+async fn client_deletion(db: State<'_, Db>, id: i64) -> Result<ClientDeletion, CoreError> {
+    clients::client_deletion(&db, id).await
+}
+
+#[tauri::command]
+async fn delete_client(db: State<'_, Db>, id: i64) -> Result<(), CoreError> {
+    clients::delete_client(&db, id).await
 }
 
 #[tauri::command]
@@ -293,6 +312,9 @@ pub fn run() {
             get_client,
             update_client,
             preview_client_rate,
+            set_client_archived,
+            client_deletion,
+            delete_client,
             create_project,
             update_project,
             set_project_complete,

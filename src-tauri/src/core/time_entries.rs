@@ -47,7 +47,7 @@ pub struct TimeEntry {
 }
 
 pub async fn create_entry(db: &Db, clock: &dyn Clock, input: EntryInput) -> Result<TimeEntry> {
-    let v = validate(db, clock, &input, None).await?;
+    let v = validate(db, clock, &input, None, None).await?;
     let id = insert(&mut *db.acquire().await?, clock, input.client_id, v).await?;
     get_entry(db, id).await
 }
@@ -88,7 +88,7 @@ pub async fn update_entry(
     if current.locked {
         return Err(locked());
     }
-    let v = validate(db, clock, &input, current.project_id).await?;
+    let v = validate(db, clock, &input, Some(current.client_id), current.project_id).await?;
 
     // Moving it to another client drops it off its Draft, which is the old client's.
     let updated = sqlx::query(
@@ -129,7 +129,7 @@ pub async fn delete_entry(db: &Db, id: i64) -> Result<()> {
     Ok(())
 }
 
-/// The client and project of the most recently logged entry, to pre-fill the next one.
+/// The client and project of the most recently logged entry of an active client, to pre-fill the next one.
 #[derive(Debug, PartialEq, Serialize, sqlx::FromRow)]
 #[serde(rename_all = "camelCase")]
 pub struct LastUsed {
@@ -142,7 +142,8 @@ pub struct LastUsed {
 pub async fn last_used(db: &Db) -> Result<Option<LastUsed>> {
     Ok(sqlx::query_as(
         "SELECT e.client_id, CASE WHEN p.complete THEN NULL ELSE e.project_id END AS project_id \
-         FROM time_entries e LEFT JOIN projects p ON p.id = e.project_id ORDER BY e.id DESC LIMIT 1",
+         FROM time_entries e JOIN clients c ON c.id = e.client_id LEFT JOIN projects p ON p.id = e.project_id \
+         WHERE NOT c.archived ORDER BY e.id DESC LIMIT 1",
     )
     .fetch_optional(db)
     .await?)
@@ -191,15 +192,16 @@ pub(super) struct Valid<'a> {
     pub note: Option<&'a str>,
 }
 
-/// `current_project` is the entry's project before this edit, which it may keep
-/// even if that project is complete by now.
+/// `current_client` and `current_project` are the entry's before this edit,
+/// which it may keep even if archived or complete by now.
 pub(super) async fn validate<'a>(
     db: &Db,
     clock: &dyn Clock,
     input: &'a EntryInput,
+    current_client: Option<i64>,
     current_project: Option<i64>,
 ) -> Result<Valid<'a>> {
-    require_client(db, input.client_id).await?;
+    require_client(db, input.client_id, current_client == Some(input.client_id)).await?;
     require_project(db, input.client_id, input.project_id, current_project).await?;
 
     let date = NaiveDate::parse_from_str(input.date.trim(), "%Y-%m-%d")
@@ -241,14 +243,17 @@ pub(super) async fn validate<'a>(
     })
 }
 
-pub(super) async fn require_client(db: &Db, client_id: i64) -> Result<()> {
-    let client: Option<i64> = sqlx::query_scalar("SELECT id FROM clients WHERE id = ?")
+/// An existing client, and an active one unless `allow_archived`.
+pub(super) async fn require_client(db: &Db, client_id: i64, allow_archived: bool) -> Result<()> {
+    let archived: Option<bool> = sqlx::query_scalar("SELECT archived FROM clients WHERE id = ?")
         .bind(client_id)
         .fetch_optional(db)
         .await?;
-    client
-        .map(|_| ())
-        .ok_or_else(|| invalid("client", "Client is required"))
+    match archived {
+        None => Err(invalid("client", "Client is required")),
+        Some(true) if !allow_archived => Err(invalid("client", "That client is archived")),
+        Some(_) => Ok(()),
+    }
 }
 
 /// No project, or an active one of `client_id` (`current` may stay though complete).

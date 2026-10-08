@@ -12,12 +12,18 @@ export type Client = {
   email: string | null;
   /** Payment terms override; null uses the default. */
   netDays: number | null;
+  /** Out of the pickers and closed to new work; its history stays. */
+  archived: boolean;
+  /** Has time entries on no invoice, so a new Draft has something to hold. */
+  hasAvailable: boolean;
 };
 export type NewClient = { name: string; rate: string };
 /** Every editable field as typed; blank clears an optional one. */
 export type ClientEdit = { name: string; rate: string; billingName: string; address: string; email: string; netDays: string };
 /** What a rate change would do to uninvoiced time. */
 export type Repricing = { seconds: number; oldCents: number; newCents: number };
+/** What deleting a client would remove. */
+export type ClientDeletion = { projects: number; entries: number; seconds: number };
 
 export type Project = { id: number; clientId: number; name: string; /** null uses the client's rate. */ rateCents: number | null; /** What its time bills at. */ effectiveRateCents: number; complete: boolean };
 /** `rate` blank uses the client's. */
@@ -59,6 +65,11 @@ export const listClients = () => invoke<Client[]>("list_clients");
 export const getClient = (id: number) => invoke<Client>("get_client", { id });
 export const updateClient = (id: number, input: ClientEdit) => invoke<Client>("update_client", { id, input });
 export const previewClientRate = (id: number, rate: string) => invoke<Repricing>("preview_client_rate", { id, rate });
+export const setClientArchived = (id: number, archived: boolean) => invoke<Client>("set_client_archived", { id, archived });
+/** Rejects if any of its entries is on an invoice. */
+export const clientDeletion = (id: number) => invoke<ClientDeletion>("client_deletion", { id });
+/** Permanent: its projects, entries and running Timer go too. */
+export const deleteClient = (id: number) => invoke<void>("delete_client", { id });
 
 /** A client's projects, active first. */
 export const listProjects = (clientId: number) => invoke<Project[]>("list_projects", { clientId });
@@ -66,6 +77,7 @@ export const getProject = (id: number) => invoke<Project>("get_project", { id })
 export const createProject = (clientId: number, input: ProjectInput) => invoke<Project>("create_project", { clientId, input });
 export const updateProject = (id: number, input: ProjectInput) => invoke<Project>("update_project", { id, input });
 export const setProjectComplete = (id: number, complete: boolean) => invoke<Project>("set_project_complete", { id, complete });
+/** Permanent: its entries go too. Rejects if any is on an invoice. */
 export const deleteProject = (id: number) => invoke<void>("delete_project", { id });
 export const previewProjectRate = (id: number, rate: string) => invoke<Repricing>("preview_project_rate", { id, rate });
 

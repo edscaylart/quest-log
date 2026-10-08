@@ -4,8 +4,8 @@ import App from "./App";
 import type { Client, EntryInput, TimeEntry } from "./api";
 import { emptyDashboard, renderWithIpc } from "./test/render";
 
-const acme: Client = { id: 1, name: "Acme", rateCents: 8500, billingName: null, address: null, email: null, netDays: null };
-const bolt: Client = { id: 2, name: "Bolt", rateCents: 12000, billingName: null, address: null, email: null, netDays: null };
+const acme: Client = { id: 1, name: "Acme", rateCents: 8500, billingName: null, address: null, email: null, netDays: null, archived: false, hasAvailable: false };
+const bolt: Client = { id: 2, name: "Bolt", rateCents: 12000, billingName: null, address: null, email: null, netDays: null, archived: false, hasAvailable: false };
 
 const unix = (...local: [number, number, number, number, number]) => new Date(...local).getTime() / 1000;
 

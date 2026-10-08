@@ -5,8 +5,8 @@ import type { Client, Stopped, TimeEntry, Timer } from "./api";
 import { emit } from "@tauri-apps/api/event";
 import { emptyDashboard, renderWithIpc } from "./test/render";
 
-const acme: Client = { id: 1, name: "Acme", rateCents: 8500, billingName: null, address: null, email: null, netDays: null };
-const bolt: Client = { id: 2, name: "Bolt", rateCents: 12000, billingName: null, address: null, email: null, netDays: null };
+const acme: Client = { id: 1, name: "Acme", rateCents: 8500, billingName: null, address: null, email: null, netDays: null, archived: false, hasAvailable: false };
+const bolt: Client = { id: 2, name: "Bolt", rateCents: 12000, billingName: null, address: null, email: null, netDays: null, archived: false, hasAvailable: false };
 
 const now = new Date(2026, 9, 7, 14, 0);
 const minutesAgo = (m: number) => now.getTime() - m * 60_000;
