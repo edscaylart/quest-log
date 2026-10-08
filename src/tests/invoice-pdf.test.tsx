@@ -1,10 +1,10 @@
 // @vitest-environment node
 // jsdom's typed arrays come from another realm, which garbles pdfkit's compressed streams.
 import { describe, expect, it } from "vitest";
-import type { Snapshot } from "./api";
-import { invoicePdf, invoicePdfName, type SentInvoice } from "./InvoicePdf";
-import { label } from "./labels";
-import { pdfPages } from "./test/pdf";
+import type { Snapshot } from "@/api";
+import { invoicePdf, invoicePdfName, type SentInvoice } from "@/InvoicePdf";
+import { label } from "@/labels";
+import { pdfPages } from "@/tests/support/pdf";
 
 const snapshot: Snapshot = {
   number: "INV-0001",

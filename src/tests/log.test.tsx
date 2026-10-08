@@ -1,8 +1,8 @@
 import { screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import App from "./App";
-import type { Client, EntryInput, TimeEntry } from "./api";
-import { emptyDashboard, renderWithIpc } from "./test/render";
+import App from "@/App";
+import type { Client, EntryInput, TimeEntry } from "@/api";
+import { emptyDashboard, renderWithIpc } from "@/tests/support/render";
 
 const acme: Client = { id: 1, name: "Acme", rateCents: 8500, billingName: null, address: null, email: null, netDays: null, archived: false, hasAvailable: false };
 const bolt: Client = { id: 2, name: "Bolt", rateCents: 12000, billingName: null, address: null, email: null, netDays: null, archived: false, hasAvailable: false };

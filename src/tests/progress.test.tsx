@@ -1,8 +1,8 @@
 import { act, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import App from "./App";
-import type { Progress, Stopped, Timer } from "./api";
-import { emptyDashboard, renderWithIpc } from "./test/render";
+import App from "@/App";
+import type { Progress, Stopped, Timer } from "@/api";
+import { emptyDashboard, renderWithIpc } from "@/tests/support/render";
 
 const acme = { id: 1, name: "Acme", rateCents: 8500, billingName: null, address: null, email: null, netDays: null, archived: false, hasAvailable: false };
 const lv2: Progress = { level: 2, xp: 900, levelXp: 600, nextLevelXp: 1800, levelUp: null };

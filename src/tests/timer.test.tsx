@@ -1,9 +1,9 @@
 import { screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import App from "./App";
-import type { Client, Stopped, TimeEntry, Timer } from "./api";
+import App from "@/App";
+import type { Client, Stopped, TimeEntry, Timer } from "@/api";
 import { emit } from "@tauri-apps/api/event";
-import { emptyDashboard, renderWithIpc } from "./test/render";
+import { emptyDashboard, renderWithIpc } from "@/tests/support/render";
 
 const acme: Client = { id: 1, name: "Acme", rateCents: 8500, billingName: null, address: null, email: null, netDays: null, archived: false, hasAvailable: false };
 const bolt: Client = { id: 2, name: "Bolt", rateCents: 12000, billingName: null, address: null, email: null, netDays: null, archived: false, hasAvailable: false };

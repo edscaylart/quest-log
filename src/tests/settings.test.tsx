@@ -1,8 +1,8 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";
-import App from "./App";
-import type { Client, PeriodInput, Settings } from "./api";
-import { emptyDashboard, renderWithIpc } from "./test/render";
+import App from "@/App";
+import type { Client, PeriodInput, Settings } from "@/api";
+import { emptyDashboard, renderWithIpc } from "@/tests/support/render";
 
 const defaults: Settings = {
   name: "",

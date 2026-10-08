@@ -1,8 +1,8 @@
 import { screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import App from "./App";
-import type { Client } from "./api";
-import { emptyDashboard, renderWithIpc } from "./test/render";
+import App from "@/App";
+import type { Client } from "@/api";
+import { emptyDashboard, renderWithIpc } from "@/tests/support/render";
 
 function fakeCore(clients: Client[] = []) {
   return {

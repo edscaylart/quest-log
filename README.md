@@ -60,6 +60,6 @@ Everything lives in one SQLite file on your Mac, never in the cloud:
 
 ## License
 
-[MIT](LICENSE). The bundled IBM Plex Mono font is under the [SIL Open Font License](src/fonts/OFL.txt).
+[MIT](LICENSE). The bundled IBM Plex Mono font is under the [SIL Open Font License](src/styles/fonts/OFL.txt).
 
 Personal project. Open an issue before a PR.
