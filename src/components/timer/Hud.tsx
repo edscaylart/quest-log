@@ -1,28 +1,19 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { ProjectField } from "./Modal";
-import { Level } from "./Progress";
+import { ProjectField } from "@/Modal";
+import { Level } from "@/components/progress/Level";
 import { Field } from "@/components/ui/Field";
 import { Modal } from "@/components/ui/Modal";
+import { useElapsed } from "@/hooks/timer/useElapsed";
 import { discardTimer, lastUsed, listClients, startTimer, stopTimer, updateTimer } from "@/integrations/tauri/commands";
 import { onTrayStart } from "@/integrations/tauri/events";
 import type { Client } from "@/lib/clients/types";
 import { toCoreError, type CoreError } from "@/lib/errors";
-import { clientAndProject, formatClock, localDate, localTime } from "@/lib/format";
+import { clientAndProject, formatClock } from "@/lib/format";
 import { label } from "@/lib/labels";
 import type { Progress } from "@/lib/progress/types";
+import { STILL_WORKING_SECONDS } from "@/lib/timer/constants";
+import { localDateTime } from "@/lib/timer/localDateTime";
 import type { Stopped, Timer } from "@/lib/timer/types";
-
-const STILL_WORKING_SECONDS = 12 * 3600;
-
-/** Whole seconds since the Timer started, ticking. Wall clock, so sleep doesn't lose time. */
-function useElapsed(startedAt: number) {
-  const [now, setNow] = useState(Date.now());
-  useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(id);
-  }, []);
-  return Math.max(0, Math.floor((now - startedAt) / 1000));
-}
 
 /**
  * The Timer's controls. `version` changes when clients or the Timer changed
@@ -179,9 +170,6 @@ function StartModal({ clients, onClose, onStarted }: { clients: Client[]; onClos
     </Modal>
   );
 }
-
-/** Local "YYYY-MM-DDTHH:MM", what `<input type="datetime-local">` holds. */
-const localDateTime = (ms: number) => `${localDate(new Date(ms))}T${localTime(ms / 1000)}`;
 
 function EditModal({ timer, clients, onClose, onSaved }: { timer: Timer; clients: Client[]; onClose: () => void; onSaved: () => void }) {
   const initialStart = localDateTime(timer.startedAt);
