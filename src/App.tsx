@@ -8,6 +8,7 @@ import { EntryModal, Log } from "./Log";
 import { Nav, type Screen } from "./nav";
 import { LevelUp } from "./Progress";
 import { ProjectDetail } from "./Projects";
+import { SettingsScreen } from "./Settings";
 import { Hud } from "./Timer";
 
 // 8×8 pixel icons, one string of unit squares each.
@@ -35,6 +36,9 @@ export default function App() {
   const top = stack.at(-1);
   const setStack = (next: Screen[]) => setStacks({ ...stacks, [tab]: next });
   const back = () => setStack(stack.slice(0, -1));
+  const openSettings = () => {
+    if (top?.kind !== "settings") setStack([...stack, { kind: "settings" }]);
+  };
   const [newEntry, setNewEntry] = useState(false);
   // Bumped when clients, entries or the Timer change, so every screen reloads.
   const [version, changed] = useReducer((n: number) => n + 1, 0);
@@ -72,6 +76,10 @@ export default function App() {
         e.preventDefault();
         setTab(tabs[index].id);
       }
+      if (e.metaKey && e.key === ",") {
+        e.preventDefault();
+        openSettings();
+      }
       if (e.metaKey && e.key === "n") {
         e.preventDefault();
         setTab("log");
@@ -80,11 +88,11 @@ export default function App() {
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, []);
+  }, [stack, tab]);
 
   return (
     <div className="app">
-      <Hud timer={timer} progress={progress} version={version} error={timerError} onStopped={stopped} onChange={() => stopped(null)} onError={failed} />
+      <Hud timer={timer} progress={progress} version={version} error={timerError} onStopped={stopped} onChange={() => stopped(null)} onError={failed} onSettings={openSettings} />
       <LevelUp level={progress?.levelUp ?? null} />
       <main>
         <Nav.Provider value={{ push: (screen) => setStack([...stack, screen]) }}>
@@ -93,7 +101,9 @@ export default function App() {
             ◀ Back
           </button>
         )}
-        {top?.kind === "client" ? (
+        {top?.kind === "settings" ? (
+          <SettingsScreen />
+        ) : top?.kind === "client" ? (
           <ClientDetail key={top.id} id={top.id} version={version} onChange={changed} />
         ) : top?.kind === "project" ? (
           <ProjectDetail

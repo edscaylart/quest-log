@@ -156,7 +156,7 @@ pub(super) fn amount(seconds: i64, rate_cents: i64) -> i64 {
     (seconds * rate_cents + 1800) / 3600
 }
 
-fn blank_to_none(text: &str) -> Option<&str> {
+pub(super) fn blank_to_none(text: &str) -> Option<&str> {
     Some(text.trim()).filter(|t| !t.is_empty())
 }
 
@@ -196,7 +196,7 @@ pub(super) fn parse_rate(input: &str) -> Result<i64> {
         .ok_or_else(malformed)
 }
 
-fn invalid(field: &'static str, message: &str) -> CoreError {
+pub(super) fn invalid(field: &'static str, message: &str) -> CoreError {
     CoreError::Invalid {
         field,
         message: message.to_owned(),

@@ -126,3 +126,22 @@ export type Progress = { level: number; xp: number; levelXp: number; nextLevelXp
 export const getProgress = () => invoke<Progress>("progress");
 /** The level-up for `level` was shown; never lowers the highest. */
 export const acknowledgeLevelUp = (level: number) => invoke<void>("acknowledge_level_up", { level });
+
+/** The freelancer's invoice header and invoicing defaults. `name` is blank until first saved. */
+export type Settings = {
+  name: string;
+  businessName: string | null;
+  address: string | null;
+  email: string | null;
+  taxId: string | null;
+  paymentInstructions: string | null;
+  /** Default payment terms, Net N. */
+  netDays: number;
+  invoicePrefix: string;
+  nextInvoiceNumber: number;
+};
+/** Every field as typed; blank clears an optional one. */
+export type SettingsEdit = { [K in keyof Settings]: string };
+
+export const getSettings = () => invoke<Settings>("get_settings");
+export const updateSettings = (input: SettingsEdit) => invoke<Settings>("update_settings", { input });

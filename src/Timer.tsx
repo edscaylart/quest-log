@@ -43,6 +43,7 @@ export function Hud({
   onStopped,
   onChange,
   onError,
+  onSettings,
 }: {
   timer: Timer | null;
   progress: Progress | null;
@@ -51,6 +52,7 @@ export function Hud({
   onStopped: (outcome: Stopped | null) => void;
   onChange: () => void;
   onError: (err: unknown) => void;
+  onSettings: () => void;
 }) {
   const [clients, setClients] = useState<Client[]>([]);
   const [starting, setStarting] = useState(false);
@@ -95,7 +97,7 @@ export function Hud({
       )}
       <div className="level">
         {progress && <Level progress={progress} />}
-        <button className="ghost icon" disabled aria-label="Settings">
+        <button className="ghost icon" aria-label="Settings" onClick={onSettings}>
           ⚙
         </button>
       </div>

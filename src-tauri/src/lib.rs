@@ -7,6 +7,7 @@ use crate::core::clients::{self, Client, ClientEdit, NewClient, Repricing};
 use crate::core::dashboard::{self, Dashboard, PeriodInput};
 use crate::core::progress::{self, Progress};
 use crate::core::projects::{self, Project, ProjectInput};
+use crate::core::settings::{self, Settings, SettingsEdit};
 use crate::core::time_entries::{self, EntryInput, LastUsed, TimeEntry};
 use crate::core::timer::{self, Stopped, Timer, TimerEdit, TimerStart};
 use crate::core::{CoreError, Db, SystemClock};
@@ -170,6 +171,16 @@ async fn acknowledge_level_up(db: State<'_, Db>, level: i64) -> Result<(), CoreE
     progress::acknowledge_level_up(&db, level).await
 }
 
+#[tauri::command]
+async fn get_settings(db: State<'_, Db>) -> Result<Settings, CoreError> {
+    settings::get_settings(&db).await
+}
+
+#[tauri::command]
+async fn update_settings(db: State<'_, Db>, input: SettingsEdit) -> Result<Settings, CoreError> {
+    settings::update_settings(&db, input).await
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -214,7 +225,9 @@ pub fn run() {
             discard_timer,
             dashboard,
             progress,
-            acknowledge_level_up
+            acknowledge_level_up,
+            get_settings,
+            update_settings
         ])
         .build(tauri::generate_context!())
         .expect("error while building Quest Log")

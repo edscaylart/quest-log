@@ -48,6 +48,7 @@ impl Clock for FakeClock {
 /// A fresh SQLite file in a temp dir with migrations applied, plus a fake clock.
 pub struct Fixture {
     pub db: Db,
+    #[allow(dead_code)]
     pub clock: FakeClock,
     path: PathBuf,
     _dir: TempDir,
