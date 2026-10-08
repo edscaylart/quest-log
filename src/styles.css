@@ -239,7 +239,8 @@ button {
   font-weight: 500;
 }
 
-input {
+input,
+select {
   padding: 6px 8px;
   border: var(--border);
   border-radius: 0;
@@ -249,6 +250,7 @@ input {
   outline: none;
 }
 
+select:focus,
 input:focus {
   background: var(--light);
 }
@@ -262,4 +264,87 @@ input::placeholder {
   justify-content: flex-end;
   gap: var(--gap);
   margin-top: 16px;
+}
+
+/* Segmented control: one pressed option, ink fill. */
+
+.segmented {
+  display: flex;
+  margin-bottom: var(--gap);
+}
+
+.segmented button {
+  flex: 1;
+  padding: 6px 8px;
+  border: var(--border);
+  background: var(--paper);
+  color: var(--ink);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.segmented button + button {
+  margin-left: -4px;
+}
+
+.segmented button[aria-pressed="true"] {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--gap);
+}
+
+/* Log */
+
+.toolbar {
+  display: flex;
+  gap: var(--gap);
+}
+
+.toolbar select {
+  flex: 1;
+}
+
+.day {
+  margin-top: 20px;
+}
+
+.day h2 {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0;
+}
+
+.row.entry {
+  padding: 0;
+}
+
+.row.entry button {
+  display: flex;
+  gap: var(--gap);
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.row.entry button:hover,
+.row.entry button:focus-visible {
+  background: var(--light);
+  outline: none;
+}
+
+.row.entry .note {
+  flex: 1;
+  overflow: hidden;
+  color: var(--dark);
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }

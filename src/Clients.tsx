@@ -1,8 +1,8 @@
-import { useEffect, useState, type FormEvent, type ReactNode } from "react";
-import { createClient, isCoreError, listClients, type Client, type CoreError } from "./api";
+import { useEffect, useState, type FormEvent } from "react";
+import { createClient, listClients, toCoreError, type Client, type CoreError } from "./api";
 import { formatCents } from "./format";
 import { label } from "./labels";
-import { Modal } from "./Modal";
+import { Field, Modal } from "./Modal";
 
 export function Clients() {
   const [clients, setClients] = useState<Client[] | null>(null);
@@ -58,8 +58,7 @@ function NewClientModal({ onClose, onCreated }: { onClose: () => void; onCreated
       await createClient({ name, rate });
       onCreated();
     } catch (err) {
-      // Anything that isn't a core error (e.g. IPC failure) still shows its message.
-      setError(isCoreError(err) ? err : { kind: "database", message: String(err) });
+      setError(toCoreError(err));
       setBusy(false);
     }
   }
@@ -91,15 +90,5 @@ function NewClientModal({ onClose, onCreated }: { onClose: () => void; onCreated
         </div>
       </form>
     </Modal>
-  );
-}
-
-function Field({ id, label, error, children }: { id: string; label: string; error: string | null; children: ReactNode }) {
-  return (
-    <div className="field">
-      <label htmlFor={id}>{label}</label>
-      {children}
-      {error && <p className="error">{error}</p>}
-    </div>
   );
 }

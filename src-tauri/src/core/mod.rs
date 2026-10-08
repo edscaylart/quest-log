@@ -2,19 +2,27 @@
 //! time matters, and typed input; they return typed output or a [`CoreError`].
 
 pub mod clients;
+pub mod time_entries;
 
 use std::path::Path;
 
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Local, NaiveDate, NaiveDateTime, TimeZone, Utc};
 use serde::Serialize;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePool};
 
 pub type Db = SqlitePool;
 
-/// Where "now" comes from. Faked in tests.
-// ponytail: local time zone joins this trait with the first rule that needs local dates.
+/// Where "now" and the local time zone come from. Faked in tests.
 pub trait Clock: Send + Sync {
     fn now(&self) -> DateTime<Utc>;
+    /// The local calendar day at an instant.
+    fn local_date(&self, at: DateTime<Utc>) -> NaiveDate;
+    /// A local wall time as an instant; `None` if a clock change skips it.
+    fn to_utc(&self, local: NaiveDateTime) -> Option<DateTime<Utc>>;
+
+    fn today(&self) -> NaiveDate {
+        self.local_date(self.now())
+    }
 }
 
 pub struct SystemClock;
@@ -22,6 +30,17 @@ pub struct SystemClock;
 impl Clock for SystemClock {
     fn now(&self) -> DateTime<Utc> {
         Utc::now()
+    }
+
+    fn local_date(&self, at: DateTime<Utc>) -> NaiveDate {
+        at.with_timezone(&Local).date_naive()
+    }
+
+    fn to_utc(&self, local: NaiveDateTime) -> Option<DateTime<Utc>> {
+        Local
+            .from_local_datetime(&local)
+            .earliest()
+            .map(|t| t.to_utc())
     }
 }
 
@@ -33,6 +52,8 @@ pub enum CoreError {
         field: &'static str,
         message: String,
     },
+    #[error("{message}")]
+    NotFound { message: String },
     #[error("database error: {message}")]
     Database { message: String },
 }

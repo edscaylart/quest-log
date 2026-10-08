@@ -1,22 +1,42 @@
 use std::path::PathBuf;
 use std::sync::Mutex;
 
-use chrono::{DateTime, TimeZone, Utc};
+use chrono::{DateTime, FixedOffset, NaiveDate, NaiveDateTime, TimeZone, Utc};
 use quest_log_lib::core::{self, Clock, Db};
 use tempfile::TempDir;
 
-/// A clock fixed at a time the test chooses.
+/// A clock fixed at a time the test chooses, in UTC−3 (São Paulo, no DST).
 pub struct FakeClock(Mutex<DateTime<Utc>>);
 
 impl FakeClock {
     pub fn at(now: DateTime<Utc>) -> Self {
         Self(Mutex::new(now))
     }
+
+    #[allow(dead_code)]
+    pub fn set(&self, now: DateTime<Utc>) {
+        *self.0.lock().unwrap() = now;
+    }
+
+    fn zone() -> FixedOffset {
+        FixedOffset::west_opt(3 * 3600).unwrap()
+    }
 }
 
 impl Clock for FakeClock {
     fn now(&self) -> DateTime<Utc> {
         *self.0.lock().unwrap()
+    }
+
+    fn local_date(&self, at: DateTime<Utc>) -> NaiveDate {
+        at.with_timezone(&Self::zone()).date_naive()
+    }
+
+    fn to_utc(&self, local: NaiveDateTime) -> Option<DateTime<Utc>> {
+        Self::zone()
+            .from_local_datetime(&local)
+            .single()
+            .map(|t| t.to_utc())
     }
 }
 

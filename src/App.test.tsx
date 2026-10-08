@@ -7,6 +7,7 @@ import { renderWithIpc } from "./test/render";
 function fakeCore(clients: Client[] = []) {
   return {
     list_clients: () => clients,
+    list_time_entries: () => [],
     create_client: ({ input }: Record<string, unknown>) => {
       const { name, rate } = input as { name: string; rate: string };
       const client = { id: clients.length + 1, name, rateCents: Math.round(Number(rate) * 100) };

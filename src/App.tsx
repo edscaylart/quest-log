@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { label } from "./labels";
 import { Clients } from "./Clients";
+import { Log } from "./Log";
 
 // 8×8 pixel icons, one string of unit squares each.
 const icons = {
@@ -21,6 +22,7 @@ type Tab = (typeof tabs)[number]["id"];
 
 export default function App() {
   const [tab, setTab] = useState<Tab>("home");
+  const [newEntry, setNewEntry] = useState(false);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -28,6 +30,11 @@ export default function App() {
       if (e.metaKey && tabs[index]) {
         e.preventDefault();
         setTab(tabs[index].id);
+      }
+      if (e.metaKey && e.key === "n") {
+        e.preventDefault();
+        setTab("log");
+        setNewEntry(true);
       }
     };
     document.addEventListener("keydown", onKey);
@@ -38,7 +45,13 @@ export default function App() {
     <div className="app">
       <Hud />
       <main>
-        {tab === "clients" ? <Clients /> : <Placeholder title={tabs.find((t) => t.id === tab)!.title} />}
+        {tab === "clients" ? (
+          <Clients />
+        ) : tab === "log" ? (
+          <Log creating={newEntry} setCreating={setNewEntry} />
+        ) : (
+          <Placeholder title={tabs.find((t) => t.id === tab)!.title} />
+        )}
       </main>
       <nav className="tabbar" role="tablist">
         {tabs.map((t) => (

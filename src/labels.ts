@@ -3,5 +3,6 @@ export const label = {
   client: "Patron",
   clients: "Patrons",
   rate: "Gold/hr",
+  allClients: "All Patrons",
   invoices: "Scrolls",
 } as const;
