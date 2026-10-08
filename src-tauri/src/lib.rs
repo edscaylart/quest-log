@@ -4,6 +4,8 @@ mod tray;
 use std::path::PathBuf;
 
 use tauri::{AppHandle, Manager, State};
+use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
+use tauri_plugin_updater::UpdaterExt;
 
 use crate::core::backups::{self, BackupInfo, DataInfo};
 use crate::core::clients::{self, Client, ClientDeletion, ClientEdit, NewClient, Repricing};
@@ -349,11 +351,49 @@ fn alert(title: &str, message: &str) {
         .status();
 }
 
+/// Offers a newer release on launch; installing restarts the app (the Timer survives).
+fn check_for_update(app: AppHandle) {
+    tauri::async_runtime::spawn(async move {
+        // ponytail: offline or no release → stay quiet and try again next launch.
+        let Ok(updater) = app.updater() else { return };
+        let Ok(Some(update)) = updater.check().await else {
+            return;
+        };
+        app.dialog()
+            .message(format!(
+                "Quest Log {} is available. You have {}.",
+                update.version, update.current_version
+            ))
+            .title("Update available")
+            .buttons(MessageDialogButtons::OkCancelCustom(
+                "Install & Restart".into(),
+                "Later".into(),
+            ))
+            .show(move |install| {
+                if !install {
+                    return;
+                }
+                tauri::async_runtime::spawn(async move {
+                    match update.download_and_install(|_, _| {}, || {}).await {
+                        Ok(()) => app.restart(),
+                        Err(e) => app
+                            .dialog()
+                            .message(e.to_string())
+                            .title("Update failed")
+                            .kind(MessageDialogKind::Error)
+                            .show(|_| {}),
+                    }
+                });
+            });
+    });
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(|app| {
             let dir = app.path().app_data_dir()?;
             std::fs::create_dir_all(&dir)?;
@@ -365,6 +405,9 @@ pub fn run() {
             app.manage(db);
             app.manage(DataInfo { path, last_backup });
             tray::setup(app.handle())?;
+            if !cfg!(debug_assertions) {
+                check_for_update(app.handle().clone());
+            }
             Ok(())
         })
         // Closing hides the window; the app and Timer keep running until ⌘Q or tray Quit.

@@ -20,6 +20,8 @@ thiserror = "2"
 serde_json = "1"
 tauri-plugin-dialog = "2"
 tauri-plugin-fs = "2"
+# 2.13.2+: 2.13.1 and earlier can delete the app on a macOS install.
+tauri-plugin-updater = "2.13.2"
 
 [dev-dependencies]
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
