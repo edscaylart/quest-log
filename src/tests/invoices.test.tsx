@@ -1,7 +1,9 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import App from "@/App";
-import type { Client, DraftCandidates, Invoice, InvoiceSummary, TimeEntry } from "@/api";
+import type { Client } from "@/lib/clients/types";
+import type { DraftCandidates, Invoice, InvoiceSummary } from "@/lib/invoices/types";
+import type { TimeEntry } from "@/lib/time-entries/types";
 import { emptyDashboard, renderWithIpc } from "@/tests/support/render";
 
 const client = (id: number, name: string): Client => ({ id, name, rateCents: 8500, billingName: null, address: null, email: null, netDays: null, archived: false, hasAvailable: false });

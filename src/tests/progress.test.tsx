@@ -1,7 +1,8 @@
 import { act, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import App from "@/App";
-import type { Progress, Stopped, Timer } from "@/api";
+import type { Progress } from "@/lib/progress/types";
+import type { Stopped, Timer } from "@/lib/timer/types";
 import { emptyDashboard, renderWithIpc } from "@/tests/support/render";
 
 const acme = { id: 1, name: "Acme", rateCents: 8500, billingName: null, address: null, email: null, netDays: null, archived: false, hasAvailable: false };

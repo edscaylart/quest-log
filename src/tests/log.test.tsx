@@ -1,7 +1,8 @@
 import { screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import App from "@/App";
-import type { Client, EntryInput, TimeEntry } from "@/api";
+import type { Client } from "@/lib/clients/types";
+import type { EntryInput, TimeEntry } from "@/lib/time-entries/types";
 import { emptyDashboard, renderWithIpc } from "@/tests/support/render";
 
 const acme: Client = { id: 1, name: "Acme", rateCents: 8500, billingName: null, address: null, email: null, netDays: null, archived: false, hasAvailable: false };

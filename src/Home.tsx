@@ -1,40 +1,16 @@
 import { useEffect, useState } from "react";
-import { getDashboard, listClients, toCoreError, type Client, type Dashboard, type Figures, type Preset } from "./api";
 import { NewClientModal } from "./Clients";
-import { formatCents, formatDay, formatMonthDay, formatRange, formatSeconds } from "./format";
-import { label } from "./labels";
-import { useNav } from "./nav";
+import { useNav } from "@/hooks/useNav";
+import { getDashboard, listClients } from "@/integrations/tauri/commands";
+import type { Client } from "@/lib/clients/types";
+import { loadSaved, presets, save, type Saved } from "@/lib/dashboard/savedPeriod";
+import type { Dashboard, Figures } from "@/lib/dashboard/types";
+import { toCoreError } from "@/lib/errors";
+import { formatCents, formatDay, formatMonthDay, formatRange, formatSeconds } from "@/lib/format";
+import { label } from "@/lib/labels";
 
-export const presets: { id: Preset; title: string }[] = [
-  { id: "1w", title: "1W" },
-  { id: "2w", title: "2W" },
-  { id: "3w", title: "3W" },
-  { id: "month", title: "M" },
-  { id: "custom", title: "Custom" },
-];
-
-/** Custom's own days; null for the other presets. */
-type Range = { start: string; end: string } | null;
-export type Saved = { preset: Preset; range: Range };
-
-const STORAGE_KEY = "home.period";
 // The running Timer counts live; H:MM only changes once a minute.
 const REFRESH_MS = 60_000;
-
-// ponytail: a per-device view preference, so browser storage rather than core.
-export function loadSaved(): Saved {
-  try {
-    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "null") as Saved | null;
-    if (saved && presets.some((p) => p.id === saved.preset)) return saved;
-  } catch {}
-  return { preset: "1w", range: null };
-}
-
-function save(saved: Saved) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
-  } catch {}
-}
 
 export function Home({ version, onChange }: { version: number; onChange: () => void }) {
   const [clients, setClients] = useState<Client[] | null>(null);

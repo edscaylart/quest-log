@@ -1,36 +1,12 @@
-import { useEffect, useId, useState, type ReactNode } from "react";
-import { listProjects, type CoreError, type Project, type Repricing } from "./api";
-import { formatCents, formatHours } from "./format";
-import { label } from "./labels";
-
-export function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
-  const titleId = useId();
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
-
-  return (
-    <div className="backdrop">
-      <div className="panel modal" role="dialog" aria-modal="true" aria-labelledby={titleId}>
-        <h2 id={titleId}>{title}</h2>
-        {children}
-      </div>
-    </div>
-  );
-}
-
-export function Field({ id, label, error, children }: { id: string; label: string; error: string | null; children: ReactNode }) {
-  return (
-    <div className="field">
-      <label htmlFor={id}>{label}</label>
-      {children}
-      {error && <p className="error">{error}</p>}
-    </div>
-  );
-}
+import { useEffect, useState } from "react";
+import { Field } from "@/components/ui/Field";
+import { Modal } from "@/components/ui/Modal";
+import { listProjects } from "@/integrations/tauri/commands";
+import type { Repricing } from "@/lib/clients/types";
+import type { CoreError } from "@/lib/errors";
+import { formatCents, formatHours } from "@/lib/format";
+import { label } from "@/lib/labels";
+import type { Project } from "@/lib/projects/types";
 
 /**
  * Optional project of `clientId`: its active ones, plus `keep` (an entry's

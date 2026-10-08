@@ -1,7 +1,9 @@
 import { act, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import App from "@/App";
-import type { Client, Stopped, TimeEntry, Timer } from "@/api";
+import type { Client } from "@/lib/clients/types";
+import type { TimeEntry } from "@/lib/time-entries/types";
+import type { Stopped, Timer } from "@/lib/timer/types";
 import { emit } from "@tauri-apps/api/event";
 import { emptyDashboard, renderWithIpc } from "@/tests/support/render";
 

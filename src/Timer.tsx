@@ -1,23 +1,16 @@
 import { listen } from "@tauri-apps/api/event";
 import { useEffect, useState, type FormEvent } from "react";
-import {
-  discardTimer,
-  lastUsed,
-  listClients,
-  startTimer,
-  stopTimer,
-  toCoreError,
-  updateTimer,
-  type Client,
-  type CoreError,
-  type Stopped,
-  type Progress,
-  type Timer,
-} from "./api";
-import { clientAndProject, formatClock, localDate, localTime } from "./format";
-import { label } from "./labels";
-import { Field, Modal, ProjectField } from "./Modal";
+import { ProjectField } from "./Modal";
 import { Level } from "./Progress";
+import { Field } from "@/components/ui/Field";
+import { Modal } from "@/components/ui/Modal";
+import { discardTimer, lastUsed, listClients, startTimer, stopTimer, updateTimer } from "@/integrations/tauri/commands";
+import type { Client } from "@/lib/clients/types";
+import { toCoreError, type CoreError } from "@/lib/errors";
+import { clientAndProject, formatClock, localDate, localTime } from "@/lib/format";
+import { label } from "@/lib/labels";
+import type { Progress } from "@/lib/progress/types";
+import type { Stopped, Timer } from "@/lib/timer/types";
 
 const STILL_WORKING_SECONDS = 12 * 3600;
 

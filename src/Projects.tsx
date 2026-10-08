@@ -1,4 +1,8 @@
 import { useEffect, useState, type FormEvent } from "react";
+import { RecentEntries } from "./Log";
+import { RepriceConfirm, reprices } from "./Modal";
+import { Field } from "@/components/ui/Field";
+import { Modal } from "@/components/ui/Modal";
 import {
   createProject,
   deleteProject,
@@ -7,18 +11,14 @@ import {
   listTimeEntries,
   previewProjectRate,
   setProjectComplete,
-  toCoreError,
   updateProject,
-  type Client,
-  type CoreError,
-  type Project,
-  type Repricing,
-  type TimeEntry,
-} from "./api";
-import { formatCents, formatHours } from "./format";
-import { label } from "./labels";
-import { RecentEntries } from "./Log";
-import { Field, Modal, RepriceConfirm, reprices } from "./Modal";
+} from "@/integrations/tauri/commands";
+import type { Client, Repricing } from "@/lib/clients/types";
+import { toCoreError, type CoreError } from "@/lib/errors";
+import { formatCents, formatHours } from "@/lib/format";
+import { label } from "@/lib/labels";
+import type { Project } from "@/lib/projects/types";
+import type { TimeEntry } from "@/lib/time-entries/types";
 
 export function ProjectDetail({
   id,

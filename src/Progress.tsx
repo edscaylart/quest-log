@@ -1,6 +1,7 @@
 import { useEffect, useReducer, useRef, useState } from "react";
-import { acknowledgeLevelUp, type Progress } from "./api";
-import { label } from "./labels";
+import { acknowledgeLevelUp } from "@/integrations/tauri/commands";
+import { label } from "@/lib/labels";
+import type { Progress } from "@/lib/progress/types";
 
 const BANNER_MS = 5000;
 

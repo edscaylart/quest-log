@@ -1,16 +1,19 @@
 import { listen } from "@tauri-apps/api/event";
 import { useEffect, useReducer, useState } from "react";
-import { getProgress, getTimer, startTimer, toCoreError, type Overlong, type Progress, type Stopped, type Timer } from "./api";
-import { label } from "./labels";
 import { ClientDetail, Clients } from "./Clients";
 import { Home } from "./Home";
 import { InvoiceDetail, Invoices } from "./Invoices";
 import { EntryModal, Log } from "./Log";
-import { Nav, type Screen } from "./nav";
 import { LevelUp } from "./Progress";
 import { ProjectDetail } from "./Projects";
 import { SettingsScreen } from "./Settings";
 import { Hud } from "./Timer";
+import { Nav, type Screen } from "@/hooks/useNav";
+import { getProgress, getTimer, startTimer } from "@/integrations/tauri/commands";
+import { toCoreError } from "@/lib/errors";
+import { label } from "@/lib/labels";
+import type { Progress } from "@/lib/progress/types";
+import type { Overlong, Stopped, Timer } from "@/lib/timer/types";
 
 // 8×8 pixel icons, one string of unit squares each.
 const icons = {

@@ -1,4 +1,8 @@
 import { useEffect, useState, type ReactNode } from "react";
+import { EntryModal } from "./Log";
+import { Field } from "@/components/ui/Field";
+import { Modal } from "@/components/ui/Modal";
+import { useNav } from "@/hooks/useNav";
 import {
   addInvoiceEntry,
   createDraft,
@@ -14,20 +18,14 @@ import {
   setInvoiceTimesheet,
   unmarkPaid,
   unsealInvoice,
-  toCoreError,
-  type Client,
-  type DraftCandidates,
-  type Invoice,
-  type InvoiceState,
-  type InvoiceSummary,
-  type PeriodInput,
-  type TimeEntry,
-} from "./api";
-import { formatCents, formatDay, formatInvoiceHours, formatMonthDay, formatRange, formatSeconds, localDate } from "./format";
-import { label } from "./labels";
-import { EntryModal } from "./Log";
-import { Field, Modal } from "./Modal";
-import { useNav } from "./nav";
+} from "@/integrations/tauri/commands";
+import type { Client } from "@/lib/clients/types";
+import type { PeriodInput } from "@/lib/dashboard/types";
+import { toCoreError } from "@/lib/errors";
+import { formatCents, formatDay, formatInvoiceHours, formatMonthDay, formatRange, formatSeconds, localDate } from "@/lib/format";
+import type { DraftCandidates, Invoice, InvoiceState, InvoiceSummary } from "@/lib/invoices/types";
+import { label } from "@/lib/labels";
+import type { TimeEntry } from "@/lib/time-entries/types";
 
 const states: InvoiceState[] = ["draft", "sent", "paid"];
 

@@ -1,4 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
+import { ProjectField } from "./Modal";
+import { Field } from "@/components/ui/Field";
+import { Modal } from "@/components/ui/Modal";
 import {
   createTimeEntry,
   deleteTimeEntry,
@@ -7,17 +10,14 @@ import {
   lastUsed,
   listClients,
   listTimeEntries,
-  toCoreError,
   updateTimeEntry,
-  type Client,
-  type CoreError,
-  type Overlong,
-  type Span,
-  type TimeEntry,
-} from "./api";
-import { clientAndProject, formatClock, formatDay, formatSeconds, localDate, localTime } from "./format";
-import { label } from "./labels";
-import { Field, Modal, ProjectField } from "./Modal";
+} from "@/integrations/tauri/commands";
+import type { Client } from "@/lib/clients/types";
+import { toCoreError, type CoreError } from "@/lib/errors";
+import { clientAndProject, formatClock, formatDay, formatSeconds, localDate, localTime } from "@/lib/format";
+import { label } from "@/lib/labels";
+import type { Span, TimeEntry } from "@/lib/time-entries/types";
+import type { Overlong } from "@/lib/timer/types";
 
 /**
  * `creating` lives in App so ⌘N can open the new-entry modal from any tab.

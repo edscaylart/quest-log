@@ -1,7 +1,9 @@
 import { screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import App from "@/App";
-import type { Client, Project, TimeEntry } from "@/api";
+import type { Client } from "@/lib/clients/types";
+import type { Project } from "@/lib/projects/types";
+import type { TimeEntry } from "@/lib/time-entries/types";
 import { emptyDashboard, renderWithIpc } from "@/tests/support/render";
 
 const client = (fields: Partial<Client> & Pick<Client, "id" | "name">): Client => ({

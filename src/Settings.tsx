@@ -1,6 +1,8 @@
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { writeFile } from "@tauri-apps/plugin-fs";
 import { useEffect, useState, type FormEvent } from "react";
+import { Field } from "@/components/ui/Field";
+import { Modal } from "@/components/ui/Modal";
 import {
   backUpNow,
   exportCsv,
@@ -10,18 +12,15 @@ import {
   listClients,
   restoreBackup,
   revealDatabase,
-  toCoreError,
   updateSettings,
-  type Client,
-  type CoreError,
-  type DataInfo,
-  type LastBackup,
-  type SettingsEdit,
-} from "./api";
-import { formatDate, localDate } from "./format";
-import { loadSaved, presets, type Saved } from "./Home";
-import { label } from "./labels";
-import { Field, Modal } from "./Modal";
+} from "@/integrations/tauri/commands";
+import type { DataInfo, LastBackup } from "@/lib/backups/types";
+import type { Client } from "@/lib/clients/types";
+import { loadSaved, presets, type Saved } from "@/lib/dashboard/savedPeriod";
+import { toCoreError, type CoreError } from "@/lib/errors";
+import { formatDate, localDate } from "@/lib/format";
+import { label } from "@/lib/labels";
+import type { SettingsEdit } from "@/lib/settings/types";
 
 export function SettingsScreen() {
   const [form, setForm] = useState<SettingsEdit | null>(null);

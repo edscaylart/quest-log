@@ -1,8 +1,8 @@
 import { Document, Page, StyleSheet, Text, View, pdf } from "@react-pdf/renderer";
 import { save } from "@tauri-apps/plugin-dialog";
 import { writeFile } from "@tauri-apps/plugin-fs";
-import type { Invoice, Snapshot } from "./api";
-import { formatCents, formatDate, formatInvoiceHours } from "./format";
+import { formatCents, formatDate, formatInvoiceHours } from "@/lib/format";
+import type { Invoice, Snapshot } from "@/lib/invoices/types";
 
 // What the client gets: built only from the Sent snapshot, regenerated on every export.
 // Canonical terms only — never RPG labels.
