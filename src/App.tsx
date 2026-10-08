@@ -1,8 +1,8 @@
 import { useEffect, useReducer, useState } from "react";
-import { ClientDetail, Clients } from "./Clients";
+import { Client } from "@/pages/Client";
+import { Clients } from "@/pages/Clients";
 import { Home } from "./Home";
 import { InvoiceDetail, Invoices } from "./Invoices";
-import { ProjectDetail } from "./Projects";
 import { SettingsScreen } from "./Settings";
 import { LevelUp } from "@/components/progress/LevelUp";
 import { TimeEntryModal } from "@/components/time-entries/TimeEntryModal";
@@ -15,6 +15,7 @@ import { label } from "@/lib/labels";
 import type { Progress } from "@/lib/progress/types";
 import type { Overlong, Stopped, Timer } from "@/lib/timer/types";
 import { Log } from "@/pages/Log";
+import { Project } from "@/pages/Project";
 
 // 8×8 pixel icons, one string of unit squares each.
 const icons = {
@@ -109,7 +110,7 @@ export default function App() {
         {top?.kind === "settings" ? (
           <SettingsScreen />
         ) : top?.kind === "client" ? (
-          <ClientDetail
+          <Client
             key={top.id}
             id={top.id}
             version={version}
@@ -120,7 +121,7 @@ export default function App() {
             }}
           />
         ) : top?.kind === "project" ? (
-          <ProjectDetail
+          <Project
             key={top.id}
             id={top.id}
             version={version}

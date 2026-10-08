@@ -1,10 +1,7 @@
 import { useEffect, useState } from "react";
 import { Field } from "@/components/ui/Field";
-import { Modal } from "@/components/ui/Modal";
 import { listProjects } from "@/integrations/tauri/commands";
-import type { Repricing } from "@/lib/clients/types";
 import type { CoreError } from "@/lib/errors";
-import { formatCents, formatHours } from "@/lib/format";
 import { label } from "@/lib/labels";
 import type { Project } from "@/lib/projects/types";
 
@@ -51,26 +48,5 @@ export function ProjectField({
           ))}
       </select>
     </Field>
-  );
-}
-
-/** Whether a rate edit needs the repricing confirm. */
-export const reprices = (r: Repricing) => r.seconds > 0 && r.oldCents !== r.newCents;
-
-export function RepriceConfirm({ repricing, busy, onCancel, onConfirm }: { repricing: Repricing; busy: boolean; onCancel: () => void; onConfirm: () => void }) {
-  return (
-    <Modal title="Change rate?" onClose={onCancel}>
-      <p>
-        {formatHours(repricing.seconds)} uninvoiced hours reprice: {formatCents(repricing.oldCents)} → {formatCents(repricing.newCents)}
-      </p>
-      <div className="actions">
-        <button type="button" className="ghost" onClick={onCancel}>
-          Cancel
-        </button>
-        <button type="button" className="primary" disabled={busy} onClick={onConfirm}>
-          Reprice
-        </button>
-      </div>
-    </Modal>
   );
 }

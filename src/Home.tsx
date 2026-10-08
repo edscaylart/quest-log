@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { NewClientModal } from "./Clients";
+import { NewClientModal } from "@/components/clients/NewClientModal";
 import { useNav } from "@/hooks/useNav";
 import { getDashboard, listClients } from "@/integrations/tauri/commands";
 import type { Client } from "@/lib/clients/types";

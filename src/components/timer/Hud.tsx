@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { ProjectField } from "@/Modal";
+import { ProjectField } from "@/components/projects/ProjectField";
 import { Level } from "@/components/progress/Level";
 import { Field } from "@/components/ui/Field";
 import { Modal } from "@/components/ui/Modal";
