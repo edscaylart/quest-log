@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 use std::sync::Mutex;
 
-use chrono::{DateTime, FixedOffset, NaiveDate, NaiveDateTime, TimeZone, Utc};
+use chrono::{DateTime, FixedOffset, NaiveDateTime, TimeZone, Utc};
 use quest_log_lib::core::{self, Clock, Db};
 use tempfile::TempDir;
 
@@ -33,8 +33,8 @@ impl Clock for FakeClock {
         *self.0.lock().unwrap()
     }
 
-    fn local_date(&self, at: DateTime<Utc>) -> NaiveDate {
-        at.with_timezone(&Self::zone()).date_naive()
+    fn local(&self, at: DateTime<Utc>) -> NaiveDateTime {
+        at.with_timezone(&Self::zone()).naive_local()
     }
 
     fn to_utc(&self, local: NaiveDateTime) -> Option<DateTime<Utc>> {

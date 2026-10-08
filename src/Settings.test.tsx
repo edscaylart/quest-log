@@ -1,7 +1,7 @@
 import { screen, waitFor, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import App from "./App";
-import type { Settings } from "./api";
+import type { Client, PeriodInput, Settings } from "./api";
 import { emptyDashboard, renderWithIpc } from "./test/render";
 
 const defaults: Settings = {
@@ -185,5 +185,82 @@ describe("Settings → Data", () => {
     expect(await within(data).findByText("This backup is from a newer Quest Log — update first.")).toBeInTheDocument();
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(calls.some((c) => c.cmd === "restore_backup")).toBe(false);
+  });
+});
+
+describe("Settings → Data → CSV export", () => {
+  const acme: Client = { id: 1, name: "Acme", rateCents: 10000, billingName: null, address: null, email: null, netDays: null, archived: false, hasAvailable: false };
+  const old: Client = { ...acme, id: 2, name: "Old Co", archived: true };
+
+  beforeEach(() => localStorage.clear());
+
+  async function openData(commands: Record<string, (args: Record<string, unknown>) => unknown> = {}) {
+    const rendered = renderWithIpc(<App />, {
+      ...fakeCore(),
+      list_clients: () => [acme, old],
+      // Home re-saves the custom days it shows; echo them back as core does at offset 0.
+      dashboard: ({ input }) => {
+        const { start, end } = input as PeriodInput;
+        return start && end ? { ...emptyDashboard(), period: { start, end } } : emptyDashboard();
+      },
+      export_csv: () => "Date\n",
+      "plugin:dialog|save": () => "/Users/ed/time.csv",
+      "plugin:fs|write_file": () => null,
+      ...commands,
+    });
+    await rendered.user.keyboard("{Meta>},{/Meta}");
+    return { ...rendered, data: await screen.findByRole("region", { name: "Data" }) };
+  }
+
+  it("defaults to the Dashboard's period and exports every Patron to the picked file", async () => {
+    localStorage.setItem("home.period", JSON.stringify({ preset: "2w", range: null }));
+    const { user, calls, data } = await openData();
+
+    expect(within(data).getByLabelText("Export period")).toHaveValue("2w");
+    await user.click(within(data).getByRole("button", { name: "Export CSV…" }));
+
+    await waitFor(() =>
+      expect(calls).toContainEqual({ cmd: "export_csv", args: { input: { preset: "2w", offset: 0, start: null, end: null }, clientId: null } }),
+    );
+    expect(calls.some((c) => c.cmd === "plugin:fs|write_file")).toBe(true);
+    expect(await within(data).findByRole("status")).toHaveTextContent("Exported");
+  });
+
+  it("exports a custom range for one Patron, retired ones included", async () => {
+    localStorage.setItem("home.period", JSON.stringify({ preset: "custom", range: { start: "2026-09-01", end: "2026-09-15" } }));
+    const { user, calls, data } = await openData();
+
+    expect(within(data).getByLabelText("From")).toHaveValue("2026-09-01");
+    expect(within(data).getByLabelText("To")).toHaveValue("2026-09-15");
+    await user.selectOptions(await within(data).findByLabelText("Export Patron"), "Old Co (Retired)");
+    await user.click(within(data).getByRole("button", { name: "Export CSV…" }));
+
+    await waitFor(() =>
+      expect(calls).toContainEqual({
+        cmd: "export_csv",
+        args: { input: { preset: "custom", offset: 0, start: "2026-09-01", end: "2026-09-15" }, clientId: 2 },
+      }),
+    );
+  });
+
+  it("exports nothing when the save panel is cancelled", async () => {
+    const { user, calls, data } = await openData({ "plugin:dialog|save": () => null });
+
+    await user.click(within(data).getByRole("button", { name: "Export CSV…" }));
+
+    await waitFor(() => expect(calls.some((c) => c.cmd === "plugin:dialog|save")).toBe(true));
+    expect(calls.some((c) => c.cmd === "export_csv")).toBe(false);
+  });
+
+  it("shows why an export failed", async () => {
+    const { user, data } = await openData({
+      export_csv: () => {
+        throw { kind: "invalid", field: "start", message: "Date is required" };
+      },
+    });
+
+    await user.click(within(data).getByRole("button", { name: "Export CSV…" }));
+
+    expect(await within(data).findByText("Date is required")).toBeInTheDocument();
   });
 });

@@ -5,7 +5,7 @@ import { formatCents, formatDay, formatMonthDay, formatRange, formatSeconds } fr
 import { label } from "./labels";
 import { useNav } from "./nav";
 
-const presets: { id: Preset; title: string }[] = [
+export const presets: { id: Preset; title: string }[] = [
   { id: "1w", title: "1W" },
   { id: "2w", title: "2W" },
   { id: "3w", title: "3W" },
@@ -15,14 +15,14 @@ const presets: { id: Preset; title: string }[] = [
 
 /** Custom's own days; null for the other presets. */
 type Range = { start: string; end: string } | null;
-type Saved = { preset: Preset; range: Range };
+export type Saved = { preset: Preset; range: Range };
 
 const STORAGE_KEY = "home.period";
 // The running Timer counts live; H:MM only changes once a minute.
 const REFRESH_MS = 60_000;
 
 // ponytail: a per-device view preference, so browser storage rather than core.
-function loadSaved(): Saved {
+export function loadSaved(): Saved {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "null") as Saved | null;
     if (saved && presets.some((p) => p.id === saved.preset)) return saved;

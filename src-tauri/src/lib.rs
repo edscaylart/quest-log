@@ -8,6 +8,7 @@ use tauri::{AppHandle, Manager, State};
 use crate::core::backups::{self, BackupInfo, DataInfo};
 use crate::core::clients::{self, Client, ClientDeletion, ClientEdit, NewClient, Repricing};
 use crate::core::dashboard::{self, Dashboard, PeriodInput};
+use crate::core::export;
 use crate::core::invoices::{self, DraftCandidates, Invoice, InvoiceSummary, NewDraft};
 use crate::core::progress::{self, Progress};
 use crate::core::projects::{self, Project, ProjectInput};
@@ -290,6 +291,15 @@ async fn delete_invoice(db: State<'_, Db>, id: i64) -> Result<(), CoreError> {
 }
 
 #[tauri::command]
+async fn export_csv(
+    db: State<'_, Db>,
+    input: PeriodInput,
+    client_id: Option<i64>,
+) -> Result<String, CoreError> {
+    export::export_csv(&db, &SystemClock, &input, client_id).await
+}
+
+#[tauri::command]
 fn data_info(data: State<'_, DataInfo>) -> DataInfo {
     data.inner().clone()
 }
@@ -413,7 +423,8 @@ pub fn run() {
             reveal_database,
             back_up_now,
             inspect_backup,
-            restore_backup
+            restore_backup,
+            export_csv
         ])
         .build(tauri::generate_context!())
         .expect("error while building Quest Log")

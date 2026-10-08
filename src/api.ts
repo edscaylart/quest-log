@@ -173,6 +173,8 @@ export const backUpNow = (path: string) => invoke<void>("back_up_now", { path })
 export const inspectBackup = (path: string) => invoke<{ date: string }>("inspect_backup", { path });
 /** Snapshots current data, swaps in the backup and restarts the app. */
 export const restoreBackup = (path: string) => invoke<void>("restore_backup", { path });
+/** The period's time entries as CSV text, oldest first; `clientId` null is every client. */
+export const exportCsv = (input: PeriodInput, clientId: number | null) => invoke<string>("export_csv", { input, clientId });
 
 export type InvoiceState = "draft" | "sent" | "paid";
 /** Local days, both included. */

@@ -4,6 +4,7 @@
 pub mod backups;
 pub mod clients;
 pub mod dashboard;
+pub mod export;
 pub mod invoices;
 pub mod progress;
 pub mod projects;
@@ -22,10 +23,15 @@ pub type Db = SqlitePool;
 /// Where "now" and the local time zone come from. Faked in tests.
 pub trait Clock: Send + Sync {
     fn now(&self) -> DateTime<Utc>;
-    /// The local calendar day at an instant.
-    fn local_date(&self, at: DateTime<Utc>) -> NaiveDate;
+    /// The local wall time at an instant.
+    fn local(&self, at: DateTime<Utc>) -> NaiveDateTime;
     /// A local wall time as an instant; `None` if a clock change skips it.
     fn to_utc(&self, local: NaiveDateTime) -> Option<DateTime<Utc>>;
+
+    /// The local calendar day at an instant.
+    fn local_date(&self, at: DateTime<Utc>) -> NaiveDate {
+        self.local(at).date()
+    }
 
     fn today(&self) -> NaiveDate {
         self.local_date(self.now())
@@ -39,8 +45,8 @@ impl Clock for SystemClock {
         Utc::now()
     }
 
-    fn local_date(&self, at: DateTime<Utc>) -> NaiveDate {
-        at.with_timezone(&Local).date_naive()
+    fn local(&self, at: DateTime<Utc>) -> NaiveDateTime {
+        at.with_timezone(&Local).naive_local()
     }
 
     fn to_utc(&self, local: NaiveDateTime) -> Option<DateTime<Utc>> {

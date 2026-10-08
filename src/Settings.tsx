@@ -1,20 +1,26 @@
 import { open, save } from "@tauri-apps/plugin-dialog";
+import { writeFile } from "@tauri-apps/plugin-fs";
 import { useEffect, useState, type FormEvent } from "react";
 import {
   backUpNow,
+  exportCsv,
   getDataInfo,
   getSettings,
   inspectBackup,
+  listClients,
   restoreBackup,
   revealDatabase,
   toCoreError,
   updateSettings,
+  type Client,
   type CoreError,
   type DataInfo,
   type LastBackup,
   type SettingsEdit,
 } from "./api";
 import { formatDate, localDate } from "./format";
+import { loadSaved, presets, type Saved } from "./Home";
+import { label } from "./labels";
 import { Field, Modal } from "./Modal";
 
 export function SettingsScreen() {
@@ -109,16 +115,21 @@ export function SettingsScreen() {
 function DataSection() {
   const [info, setInfo] = useState<DataInfo | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [backedUp, setBackedUp] = useState(false);
+  const [done, setDone] = useState<string | null>(null);
   const [restoring, setRestoring] = useState<{ path: string; date: string } | null>(null);
+  const [clients, setClients] = useState<Client[]>([]);
+  // The Dashboard's period at offset 0; Custom starts on the days it last showed.
+  const [{ preset, range }, setPeriod] = useState<Saved>(loadSaved);
+  const [clientId, setClientId] = useState<number | null>(null);
 
   useEffect(() => {
     getDataInfo().then(setInfo);
+    listClients().then(setClients);
   }, []);
 
   async function attempt(action: () => Promise<void>) {
     setError(null);
-    setBackedUp(false);
+    setDone(null);
     try {
       await action();
     } catch (err) {
@@ -131,8 +142,19 @@ function DataSection() {
       const path = await save({ defaultPath: `Quest Log backup ${localDate(new Date())}.db`, filters: [{ name: "Database", extensions: ["db"] }] });
       if (!path) return;
       await backUpNow(path);
-      setBackedUp(true);
+      setDone("Backed up");
     });
+
+  const exportEntries = () =>
+    attempt(async () => {
+      const path = await save({ defaultPath: `Quest Log time entries ${localDate(new Date())}.csv`, filters: [{ name: "CSV", extensions: ["csv"] }] });
+      if (!path) return;
+      const csv = await exportCsv({ preset, offset: 0, start: range?.start ?? null, end: range?.end ?? null }, clientId);
+      await writeFile(path, new TextEncoder().encode(csv));
+      setDone("Exported");
+    });
+  const setRange = (side: "start" | "end") => (e: { target: { value: string } }) =>
+    setPeriod({ preset, range: { start: range?.start ?? "", end: range?.end ?? "", [side]: e.target.value } });
 
   const pickBackup = () =>
     attempt(async () => {
@@ -155,9 +177,9 @@ function DataSection() {
       )}
       {error && <p className="error">{error}</p>}
       <div className="actions">
-        {backedUp && (
+        {done && (
           <p className="hint" role="status">
-            Backed up
+            {done}
           </p>
         )}
         <button type="button" onClick={() => attempt(revealDatabase)}>
@@ -168,6 +190,33 @@ function DataSection() {
         </button>
         <button type="button" onClick={pickBackup}>
           Restore from backup…
+        </button>
+      </div>
+      <h3>Export time entries</h3>
+      <div className="toolbar">
+        <select aria-label="Export period" value={preset} onChange={(e) => setPeriod({ preset: e.target.value as Saved["preset"], range })}>
+          {presets.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.title}
+            </option>
+          ))}
+        </select>
+        {preset === "custom" && (
+          <div className="pair">
+            <input type="date" aria-label="From" value={range?.start ?? ""} onChange={setRange("start")} />
+            <input type="date" aria-label="To" value={range?.end ?? ""} onChange={setRange("end")} />
+          </div>
+        )}
+        <select aria-label={`Export ${label.client}`} value={clientId ?? ""} onChange={(e) => setClientId(e.target.value ? Number(e.target.value) : null)}>
+          <option value="">{label.allClients}</option>
+          {clients.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.archived ? `${c.name} (${label.archived})` : c.name}
+            </option>
+          ))}
+        </select>
+        <button type="button" onClick={exportEntries}>
+          Export CSV…
         </button>
       </div>
       {restoring && (
