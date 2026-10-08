@@ -1,5 +1,6 @@
 use chrono::{Days, NaiveDate, NaiveTime};
 use serde::{Deserialize, Serialize};
+use sqlx::SqliteConnection;
 
 use super::{Clock, CoreError, Db, Result};
 
@@ -39,23 +40,32 @@ pub struct TimeEntry {
 
 pub async fn create_entry(db: &Db, clock: &dyn Clock, input: EntryInput) -> Result<TimeEntry> {
     let v = validate(db, clock, &input).await?;
+    let id = insert(&mut *db.acquire().await?, clock, input.client_id, v).await?;
+    get_entry(db, id).await
+}
 
-    let id = sqlx::query(
+/// Writes an already-validated entry and returns its id. Takes a connection so
+/// callers can make it part of a transaction.
+pub(super) async fn insert(
+    conn: &mut SqliteConnection,
+    clock: &dyn Clock,
+    client_id: i64,
+    v: Valid<'_>,
+) -> Result<i64> {
+    Ok(sqlx::query(
         "INSERT INTO time_entries (client_id, date, seconds, started_at, ended_at, note, created_at) \
          VALUES (?, ?, ?, ?, ?, ?, ?)",
     )
-    .bind(input.client_id)
+    .bind(client_id)
     .bind(v.date.to_string())
     .bind(v.seconds)
     .bind(v.started_at)
     .bind(v.ended_at)
     .bind(v.note)
     .bind(clock.now().timestamp())
-    .execute(db)
+    .execute(conn)
     .await?
-    .last_insert_rowid();
-
-    get_entry(db, id).await
+    .last_insert_rowid())
 }
 
 /// Replaces every field of an entry, under the same rules as creating one.
@@ -123,7 +133,7 @@ pub async fn list_entries(db: &Db, client_id: Option<i64>) -> Result<Vec<TimeEnt
 const SELECT: &str = "SELECT e.id, e.client_id, c.name AS client_name, e.date, e.seconds, \
     e.started_at, e.ended_at, e.note FROM time_entries e JOIN clients c ON c.id = e.client_id";
 
-async fn get_entry(db: &Db, id: i64) -> Result<TimeEntry> {
+pub(super) async fn get_entry(db: &Db, id: i64) -> Result<TimeEntry> {
     sqlx::query_as(&format!("{SELECT} WHERE e.id = ?"))
         .bind(id)
         .fetch_optional(db)
@@ -137,22 +147,20 @@ fn not_found() -> CoreError {
     }
 }
 
-struct Valid<'a> {
-    date: NaiveDate,
-    seconds: i64,
-    started_at: Option<i64>,
-    ended_at: Option<i64>,
-    note: Option<&'a str>,
+pub(super) struct Valid<'a> {
+    pub date: NaiveDate,
+    pub seconds: i64,
+    pub started_at: Option<i64>,
+    pub ended_at: Option<i64>,
+    pub note: Option<&'a str>,
 }
 
-async fn validate<'a>(db: &Db, clock: &dyn Clock, input: &'a EntryInput) -> Result<Valid<'a>> {
-    let client: Option<i64> = sqlx::query_scalar("SELECT id FROM clients WHERE id = ?")
-        .bind(input.client_id)
-        .fetch_optional(db)
-        .await?;
-    if client.is_none() {
-        return Err(invalid("client", "Client is required"));
-    }
+pub(super) async fn validate<'a>(
+    db: &Db,
+    clock: &dyn Clock,
+    input: &'a EntryInput,
+) -> Result<Valid<'a>> {
+    require_client(db, input.client_id).await?;
 
     let date = NaiveDate::parse_from_str(input.date.trim(), "%Y-%m-%d")
         .map_err(|_| invalid("date", "Date is required"))?;
@@ -188,12 +196,18 @@ async fn validate<'a>(db: &Db, clock: &dyn Clock, input: &'a EntryInput) -> Resu
         seconds,
         started_at,
         ended_at,
-        note: input
-            .note
-            .as_deref()
-            .map(str::trim)
-            .filter(|n| !n.is_empty()),
+        note: input.note.as_deref().and_then(clean_note),
     })
+}
+
+pub(super) async fn require_client(db: &Db, client_id: i64) -> Result<()> {
+    let client: Option<i64> = sqlx::query_scalar("SELECT id FROM clients WHERE id = ?")
+        .bind(client_id)
+        .fetch_optional(db)
+        .await?;
+    client
+        .map(|_| ())
+        .ok_or_else(|| invalid("client", "Client is required"))
 }
 
 fn parse_time(field: &'static str, input: &str) -> Result<NaiveTime> {
@@ -230,7 +244,11 @@ fn parse_duration(input: &str) -> Result<i64> {
     Ok((hours * 3600.0).round() as i64)
 }
 
-fn invalid(field: &'static str, message: &str) -> CoreError {
+pub(super) fn clean_note(note: &str) -> Option<&str> {
+    Some(note.trim()).filter(|n| !n.is_empty())
+}
+
+pub(super) fn invalid(field: &'static str, message: &str) -> CoreError {
     CoreError::Invalid {
         field,
         message: message.to_owned(),

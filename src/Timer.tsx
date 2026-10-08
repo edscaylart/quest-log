@@ -1,0 +1,234 @@
+import { useEffect, useState, type FormEvent } from "react";
+import {
+  discardTimer,
+  lastUsedClient,
+  listClients,
+  startTimer,
+  stopTimer,
+  toCoreError,
+  updateTimer,
+  type Client,
+  type CoreError,
+  type Stopped,
+  type Timer,
+} from "./api";
+import { formatClock, localDate, localTime } from "./format";
+import { label } from "./labels";
+import { Field, Modal } from "./Modal";
+
+const STILL_WORKING_SECONDS = 12 * 3600;
+
+/** Whole seconds since the Timer started, ticking. Wall clock, so sleep doesn't lose time. */
+function useElapsed(startedAt: number) {
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  return Math.max(0, Math.floor((now - startedAt) / 1000));
+}
+
+/**
+ * The Timer's controls. `version` changes when clients or the Timer changed
+ * elsewhere; `onStopped` gets what a stop or start did to a running Timer.
+ */
+export function Hud({
+  timer,
+  version,
+  error,
+  onStopped,
+  onChange,
+  onError,
+}: {
+  timer: Timer | null;
+  version: number;
+  error: string | null;
+  onStopped: (outcome: Stopped | null) => void;
+  onChange: () => void;
+  onError: (err: unknown) => void;
+}) {
+  const [clients, setClients] = useState<Client[]>([]);
+  const [starting, setStarting] = useState(false);
+  const [editing, setEditing] = useState(false);
+
+  useEffect(() => {
+    listClients().then(setClients);
+  }, [version]);
+
+  const stop = () => stopTimer().then(onStopped, onError);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!e.metaKey || e.key !== "t") return;
+      e.preventDefault();
+      if (timer) stop();
+      else if (clients.length) setStarting(true);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [timer, clients]);
+
+  return (
+    <header className="hud">
+      {timer ? (
+        <Running timer={timer} onEdit={() => setEditing(true)} onStop={stop} onDiscard={() => discardTimer().then(onChange, onError)} />
+      ) : (
+        <button className="primary" disabled={!clients.length} onClick={() => setStarting(true)}>
+          ▶ Start
+        </button>
+      )}
+      {error && (
+        <p className="error" role="alert">
+          {error}
+        </p>
+      )}
+      <div className="level">
+        <span className="num">Lv 1</span>
+        <span className="xp" aria-label="XP" />
+        <button className="ghost icon" disabled aria-label="Settings">
+          ⚙
+        </button>
+      </div>
+      {starting && (
+        <StartModal
+          clients={clients}
+          onClose={() => setStarting(false)}
+          onStarted={(outcome) => {
+            setStarting(false);
+            onStopped(outcome);
+          }}
+        />
+      )}
+      {editing && timer && (
+        <EditModal
+          timer={timer}
+          clients={clients}
+          onClose={() => setEditing(false)}
+          onSaved={() => {
+            setEditing(false);
+            onChange();
+          }}
+        />
+      )}
+    </header>
+  );
+}
+
+function Running({ timer, onEdit, onStop, onDiscard }: { timer: Timer; onEdit: () => void; onStop: () => void; onDiscard: () => void }) {
+  const elapsed = useElapsed(timer.startedAt);
+  return (
+    <div className="timer">
+      <button className="ghost" aria-label={`Edit Timer, ${timer.clientName}`} onClick={onEdit}>
+        <span role="timer" className="num">
+          {formatClock(elapsed)}
+        </span>
+        <span className="who">{timer.clientName}</span>
+      </button>
+      <button className="primary" onClick={onStop}>
+        Stop
+      </button>
+      <button className="ghost" onClick={onDiscard}>
+        Discard
+      </button>
+      {/* ponytail: window hint only; the tray hint arrives in #4. No auto-stop. */}
+      {elapsed >= STILL_WORKING_SECONDS && <p className="hint">Still working?</p>}
+    </div>
+  );
+}
+
+function StartModal({ clients, onClose, onStarted }: { clients: Client[]; onClose: () => void; onStarted: (outcome: Stopped | null) => void }) {
+  const [clientId, setClientId] = useState(clients[0]?.id ?? 0);
+  const [error, setError] = useState<CoreError | null>(null);
+
+  useEffect(() => {
+    lastUsedClient().then((last) => clients.some((c) => c.id === last) && setClientId(last!));
+  }, []);
+
+  function submit(e: FormEvent) {
+    e.preventDefault();
+    startTimer({ clientId, note: null }).then(onStarted, (err) => setError(toCoreError(err)));
+  }
+
+  return (
+    <Modal title="Start Timer" onClose={onClose}>
+      <form onSubmit={submit} noValidate>
+        <ClientField clients={clients} clientId={clientId} setClientId={setClientId} error={error} />
+        {error && error.kind !== "invalid" && <p className="error">{error.message}</p>}
+        <div className="actions">
+          <button type="button" className="ghost" onClick={onClose}>
+            Cancel
+          </button>
+          <button type="submit" className="primary">
+            Start
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+/** Local "YYYY-MM-DDTHH:MM", what `<input type="datetime-local">` holds. */
+const localDateTime = (ms: number) => `${localDate(new Date(ms))}T${localTime(ms / 1000)}`;
+
+function EditModal({ timer, clients, onClose, onSaved }: { timer: Timer; clients: Client[]; onClose: () => void; onSaved: () => void }) {
+  const initialStart = localDateTime(timer.startedAt);
+  const [clientId, setClientId] = useState(timer.clientId);
+  const [note, setNote] = useState(timer.note ?? "");
+  const [start, setStart] = useState(initialStart);
+  const [error, setError] = useState<CoreError | null>(null);
+  const fieldError = (field: string) => (error?.kind === "invalid" && error.field === field ? error.message : null);
+
+  function submit(e: FormEvent) {
+    e.preventDefault();
+    // Unchanged start is sent as null so the core keeps its seconds.
+    updateTimer({ clientId, note, start: start === initialStart ? null : start }).then(onSaved, (err) => setError(toCoreError(err)));
+  }
+
+  return (
+    <Modal title="Edit Timer" onClose={onClose}>
+      <form onSubmit={submit} noValidate>
+        <ClientField clients={clients} clientId={clientId} setClientId={setClientId} error={error} />
+        <Field id="timer-start" label="Start" error={fieldError("start")}>
+          <input id="timer-start" type="datetime-local" value={start} onChange={(e) => setStart(e.target.value)} aria-invalid={!!fieldError("start")} />
+        </Field>
+        <Field id="timer-note" label="Note" error={null}>
+          <input id="timer-note" value={note} onChange={(e) => setNote(e.target.value)} />
+        </Field>
+        {error && error.kind !== "invalid" && <p className="error">{error.message}</p>}
+        <div className="actions">
+          <button type="button" className="ghost" onClick={onClose}>
+            Cancel
+          </button>
+          <button type="submit" className="primary">
+            Save
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+function ClientField({
+  clients,
+  clientId,
+  setClientId,
+  error,
+}: {
+  clients: Client[];
+  clientId: number;
+  setClientId: (id: number) => void;
+  error: CoreError | null;
+}) {
+  const message = error?.kind === "invalid" && error.field === "client" ? error.message : null;
+  return (
+    <Field id="timer-client" label={label.client} error={message}>
+      <select id="timer-client" value={clientId} onChange={(e) => setClientId(Number(e.target.value))} aria-invalid={!!message}>
+        {clients.map((c) => (
+          <option key={c.id} value={c.id}>
+            {c.name}
+          </option>
+        ))}
+      </select>
+    </Field>
+  );
+}

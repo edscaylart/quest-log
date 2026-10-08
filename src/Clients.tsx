@@ -4,7 +4,7 @@ import { formatCents } from "./format";
 import { label } from "./labels";
 import { Field, Modal } from "./Modal";
 
-export function Clients() {
+export function Clients({ onChange }: { onChange: () => void }) {
   const [clients, setClients] = useState<Client[] | null>(null);
   const [creating, setCreating] = useState(false);
 
@@ -36,6 +36,7 @@ export function Clients() {
           onCreated={() => {
             setCreating(false);
             reload();
+            onChange();
           }}
         />
       )}

@@ -3,6 +3,7 @@
 
 pub mod clients;
 pub mod time_entries;
+pub mod timer;
 
 use std::path::Path;
 

@@ -21,3 +21,6 @@ export function localTime(unix: number) {
   const d = new Date(unix * 1000);
   return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
+
+/** 3723 → "1:02:03". The running Timer. */
+export const formatClock = (seconds: number) => `${formatSeconds(seconds)}:${pad(seconds % 60)}`;

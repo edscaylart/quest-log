@@ -17,6 +17,7 @@ function fakeCore(entries: TimeEntry[] = [], lastUsed: number | null = null) {
   return {
     list_clients: () => [acme, bolt],
     last_used_client: () => lastUsed,
+    get_timer: () => null,
     list_time_entries: ({ clientId }: Record<string, unknown>) =>
       entries.filter((e) => clientId == null || e.clientId === clientId),
     create_time_entry: ({ input }: Record<string, unknown>) => {

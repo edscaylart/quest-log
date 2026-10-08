@@ -4,6 +4,7 @@ use tauri::{Manager, State};
 
 use crate::core::clients::{self, Client, NewClient};
 use crate::core::time_entries::{self, EntryInput, TimeEntry};
+use crate::core::timer::{self, Stopped, Timer, TimerEdit, TimerStart};
 use crate::core::{CoreError, Db, SystemClock};
 
 // Thin wrappers: one command per core function, no logic.
@@ -50,6 +51,36 @@ async fn last_used_client(db: State<'_, Db>) -> Result<Option<i64>, CoreError> {
     time_entries::last_used_client(&db).await
 }
 
+#[tauri::command]
+async fn get_timer(db: State<'_, Db>) -> Result<Option<Timer>, CoreError> {
+    timer::get_timer(&db).await
+}
+
+#[tauri::command]
+async fn start_timer(db: State<'_, Db>, input: TimerStart) -> Result<Option<Stopped>, CoreError> {
+    timer::start_timer(&db, &SystemClock, input).await
+}
+
+#[tauri::command]
+async fn stop_timer(db: State<'_, Db>) -> Result<Stopped, CoreError> {
+    timer::stop_timer(&db, &SystemClock).await
+}
+
+#[tauri::command]
+async fn update_timer(db: State<'_, Db>, input: TimerEdit) -> Result<Timer, CoreError> {
+    timer::update_timer(&db, &SystemClock, input).await
+}
+
+#[tauri::command]
+async fn finish_timer(db: State<'_, Db>, input: EntryInput) -> Result<TimeEntry, CoreError> {
+    timer::finish_timer(&db, &SystemClock, input).await
+}
+
+#[tauri::command]
+async fn discard_timer(db: State<'_, Db>) -> Result<(), CoreError> {
+    timer::discard_timer(&db).await
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -67,7 +98,13 @@ pub fn run() {
             update_time_entry,
             delete_time_entry,
             list_time_entries,
-            last_used_client
+            last_used_client,
+            get_timer,
+            start_timer,
+            stop_timer,
+            update_timer,
+            finish_timer,
+            discard_timer
         ])
         .run(tauri::generate_context!())
         .expect("error while running Quest Log");

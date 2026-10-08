@@ -1,7 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useReducer, useState } from "react";
+import { getTimer, startTimer, toCoreError, type Overlong, type Stopped, type Timer } from "./api";
 import { label } from "./labels";
 import { Clients } from "./Clients";
-import { Log } from "./Log";
+import { EntryModal, Log } from "./Log";
+import { Hud } from "./Timer";
 
 // 8×8 pixel icons, one string of unit squares each.
 const icons = {
@@ -23,6 +25,22 @@ type Tab = (typeof tabs)[number]["id"];
 export default function App() {
   const [tab, setTab] = useState<Tab>("home");
   const [newEntry, setNewEntry] = useState(false);
+  // Bumped when clients, entries or the Timer change, so every screen reloads.
+  const [version, changed] = useReducer((n: number) => n + 1, 0);
+  const [timer, setTimer] = useState<Timer | null>(null);
+  const [fixing, setFixing] = useState<Overlong | null>(null);
+  const [timerError, setTimerError] = useState<string | null>(null);
+  const failed = (err: unknown) => setTimerError(toCoreError(err).message);
+
+  useEffect(() => {
+    getTimer().then(setTimer);
+  }, [version]);
+
+  const stopped = (outcome: Stopped | null) => {
+    if (outcome?.kind === "needsEdit") setFixing(outcome.overlong);
+    setTimerError(null);
+    changed();
+  };
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -43,12 +61,17 @@ export default function App() {
 
   return (
     <div className="app">
-      <Hud />
+      <Hud timer={timer} version={version} error={timerError} onStopped={stopped} onChange={() => stopped(null)} onError={failed} />
       <main>
         {tab === "clients" ? (
-          <Clients />
+          <Clients onChange={changed} />
         ) : tab === "log" ? (
-          <Log creating={newEntry} setCreating={setNewEntry} />
+          <Log
+            creating={newEntry}
+            setCreating={setNewEntry}
+            version={version}
+            onResume={(e) => startTimer({ clientId: e.clientId, note: e.note }).then(stopped, failed)}
+          />
         ) : (
           <Placeholder title={tabs.find((t) => t.id === tab)!.title} />
         )}
@@ -63,25 +86,18 @@ export default function App() {
           </button>
         ))}
       </nav>
+      {fixing && (
+        <EntryModal
+          entry={null}
+          overlong={fixing}
+          onClose={() => setFixing(null)}
+          onSaved={() => {
+            setFixing(null);
+            changed();
+          }}
+        />
+      )}
     </div>
-  );
-}
-
-// ponytail: placeholder HUD; Timer and XP arrive with their own tickets.
-function Hud() {
-  return (
-    <header className="hud">
-      <button className="primary" disabled>
-        ▶ Start
-      </button>
-      <div className="level">
-        <span className="num">Lv 1</span>
-        <span className="xp" aria-label="XP" />
-        <button className="ghost icon" disabled aria-label="Settings">
-          ⚙
-        </button>
-      </div>
-    </header>
   );
 }
 

@@ -2,6 +2,8 @@ import { useEffect, useState, type FormEvent } from "react";
 import {
   createTimeEntry,
   deleteTimeEntry,
+  discardTimer,
+  finishTimer,
   lastUsedClient,
   listClients,
   listTimeEntries,
@@ -9,15 +11,29 @@ import {
   updateTimeEntry,
   type Client,
   type CoreError,
+  type Overlong,
   type Span,
   type TimeEntry,
 } from "./api";
-import { formatDay, formatSeconds, localDate, localTime } from "./format";
+import { formatClock, formatDay, formatSeconds, localDate, localTime } from "./format";
 import { label } from "./labels";
 import { Field, Modal } from "./Modal";
 
-/** `creating` lives in App so ⌘N can open the new-entry modal from any tab. */
-export function Log({ creating, setCreating }: { creating: boolean; setCreating: (open: boolean) => void }) {
+/**
+ * `creating` lives in App so ⌘N can open the new-entry modal from any tab.
+ * `version` changes when entries changed elsewhere (e.g. a Timer stopped).
+ */
+export function Log({
+  creating,
+  setCreating,
+  version,
+  onResume,
+}: {
+  creating: boolean;
+  setCreating: (open: boolean) => void;
+  version: number;
+  onResume: (entry: TimeEntry) => void;
+}) {
   const [clients, setClients] = useState<Client[]>([]);
   const [clientId, setClientId] = useState<number | null>(null);
   const [entries, setEntries] = useState<TimeEntry[] | null>(null);
@@ -29,7 +45,7 @@ export function Log({ creating, setCreating }: { creating: boolean; setCreating:
   }, []);
   useEffect(() => {
     reload();
-  }, [clientId]);
+  }, [clientId, version]);
 
   const close = () => {
     setCreating(false);
@@ -75,6 +91,9 @@ export function Log({ creating, setCreating }: { creating: boolean; setCreating:
                   <span className="note">{e.note}</span>
                   <span className="num">{formatSeconds(e.seconds)}</span>
                 </button>
+                <button className="ghost icon" aria-label="Resume" onClick={() => onResume(e)}>
+                  ▶
+                </button>
               </li>
             ))}
           </ul>
@@ -93,27 +112,39 @@ function byDay(entries: TimeEntry[]) {
 }
 
 /** Like formatSeconds, but keeps leftover seconds so an untouched edit saves the same duration. */
-const editableDuration = (s: number) => (s % 60 ? `${formatSeconds(s)}:${String(s % 60).padStart(2, "0")}` : formatSeconds(s));
+const editableDuration = (s: number) => (s % 60 ? formatClock(s) : formatSeconds(s));
 
-function EntryModal({ entry, onClose, onSaved }: { entry: TimeEntry | null; onClose: () => void; onSaved: () => void }) {
+/** New (neither prop), edit (`entry`), or fix a Timer that ran over 24 hours (`overlong`). */
+export function EntryModal({
+  entry,
+  overlong,
+  onClose,
+  onSaved,
+}: {
+  entry: TimeEntry | null;
+  overlong?: Overlong;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const initial = entry ?? overlong;
   const [clients, setClients] = useState<Client[] | null>(null);
-  const [clientId, setClientId] = useState(entry?.clientId ?? 0);
-  const [date, setDate] = useState(entry?.date ?? localDate(new Date()));
+  const [clientId, setClientId] = useState(initial?.clientId ?? 0);
+  const [date, setDate] = useState(initial?.date ?? localDate(new Date()));
   const [mode, setMode] = useState<Span["mode"]>(entry?.startedAt != null ? "range" : "duration");
-  const [duration, setDuration] = useState(entry && entry.startedAt == null ? editableDuration(entry.seconds) : "");
+  const [duration, setDuration] = useState(initial && entry?.startedAt == null ? editableDuration(initial.seconds) : "");
   const [start, setStart] = useState(entry?.startedAt != null ? localTime(entry.startedAt) : "");
   const [end, setEnd] = useState(entry?.endedAt != null ? localTime(entry.endedAt) : "");
-  const [note, setNote] = useState(entry?.note ?? "");
+  const [note, setNote] = useState(initial?.note ?? "");
   const [error, setError] = useState<CoreError | null>(null);
   const [busy, setBusy] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   useEffect(() => {
-    Promise.all([listClients(), entry ? null : lastUsedClient()]).then(([list, last]) => {
+    Promise.all([listClients(), initial ? null : lastUsedClient()]).then(([list, last]) => {
       setClients(list);
-      if (!entry) setClientId(list.find((c) => c.id === last)?.id ?? list[0]?.id ?? 0);
+      if (!initial) setClientId(list.find((c) => c.id === last)?.id ?? list[0]?.id ?? 0);
     });
-  }, [entry]);
+  }, [initial]);
 
   const fieldError = (field: string) => (error?.kind === "invalid" && error.field === field ? error.message : null);
 
@@ -133,7 +164,7 @@ function EntryModal({ entry, onClose, onSaved }: { entry: TimeEntry | null; onCl
     e.preventDefault();
     const span: Span = mode === "duration" ? { mode, duration } : { mode, start, end };
     const input = { clientId, date, span, note };
-    run(() => (entry ? updateTimeEntry(entry.id, input) : createTimeEntry(input)));
+    run(() => (overlong ? finishTimer(input) : entry ? updateTimeEntry(entry.id, input) : createTimeEntry(input)));
   }
 
   if (entry && confirmingDelete) {
@@ -155,7 +186,8 @@ function EntryModal({ entry, onClose, onSaved }: { entry: TimeEntry | null; onCl
   }
 
   return (
-    <Modal title={entry ? "Edit time entry" : "New time entry"} onClose={onClose}>
+    <Modal title={overlong ? "Fix Timer entry" : entry ? "Edit time entry" : "New time entry"} onClose={onClose}>
+      {overlong && <p className="hint">The Timer ran over 24 hours. Fix the duration to save it, or discard it.</p>}
       {clients?.length === 0 ? (
         <>
           <p className="hint">Add a {label.client} first.</p>
@@ -216,6 +248,11 @@ function EntryModal({ entry, onClose, onSaved }: { entry: TimeEntry | null; onCl
             {entry && (
               <button type="button" className="ghost" onClick={() => setConfirmingDelete(true)}>
                 Delete
+              </button>
+            )}
+            {overlong && (
+              <button type="button" className="ghost" disabled={busy} onClick={() => run(discardTimer)}>
+                Discard
               </button>
             )}
             <button type="button" className="ghost" onClick={onClose}>
