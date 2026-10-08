@@ -1,7 +1,7 @@
 import { useEffect, useReducer, useState } from "react";
 import { Client } from "@/pages/Client";
 import { Clients } from "@/pages/Clients";
-import { Home } from "./Home";
+import { Home } from "@/pages/Home";
 import { Invoice } from "@/pages/Invoice";
 import { Invoices } from "@/pages/Invoices";
 import { SettingsScreen } from "./Settings";
