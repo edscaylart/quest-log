@@ -69,6 +69,7 @@ const entry = (fields: Partial<TimeEntry> & Pick<TimeEntry, "id">): TimeEntry =>
   startedAt: null,
   endedAt: null,
   note: null,
+  locked: false,
   ...fields,
 });
 

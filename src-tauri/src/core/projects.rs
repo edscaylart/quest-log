@@ -130,7 +130,8 @@ pub async fn preview_project_rate(db: &Db, id: i64, rate: &str) -> Result<Repric
     let project = get_project(db, id).await?;
     let client_rate = get_client(db, project.client_id).await?.rate_cents;
     let seconds: i64 = sqlx::query_scalar(
-        "SELECT COALESCE(SUM(seconds), 0) FROM time_entries WHERE project_id = ?",
+        "SELECT COALESCE(SUM(seconds), 0) FROM time_entries \
+         WHERE project_id = ? AND invoiced_rate_cents IS NULL",
     )
     .bind(id)
     .fetch_one(db)

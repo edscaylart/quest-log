@@ -198,12 +198,12 @@ async fn create_draft(db: State<'_, Db>, input: NewDraft) -> Result<Invoice, Cor
 
 #[tauri::command]
 async fn list_invoices(db: State<'_, Db>) -> Result<Vec<InvoiceSummary>, CoreError> {
-    invoices::list_invoices(&db).await
+    invoices::list_invoices(&db, &SystemClock).await
 }
 
 #[tauri::command]
 async fn get_invoice(db: State<'_, Db>, id: i64) -> Result<Invoice, CoreError> {
-    invoices::get_invoice(&db, id).await
+    invoices::get_invoice(&db, &SystemClock, id).await
 }
 
 #[tauri::command]
@@ -212,7 +212,7 @@ async fn add_invoice_entry(
     id: i64,
     entry_id: i64,
 ) -> Result<Invoice, CoreError> {
-    invoices::add_invoice_entry(&db, id, entry_id).await
+    invoices::add_invoice_entry(&db, &SystemClock, id, entry_id).await
 }
 
 #[tauri::command]
@@ -221,7 +221,7 @@ async fn remove_invoice_entry(
     id: i64,
     entry_id: i64,
 ) -> Result<Invoice, CoreError> {
-    invoices::remove_invoice_entry(&db, id, entry_id).await
+    invoices::remove_invoice_entry(&db, &SystemClock, id, entry_id).await
 }
 
 #[tauri::command]
@@ -230,7 +230,36 @@ async fn set_invoice_timesheet(
     id: i64,
     timesheet: bool,
 ) -> Result<Invoice, CoreError> {
-    invoices::set_invoice_timesheet(&db, id, timesheet).await
+    invoices::set_invoice_timesheet(&db, &SystemClock, id, timesheet).await
+}
+
+#[tauri::command]
+async fn set_invoice_net_days(
+    db: State<'_, Db>,
+    id: i64,
+    net_days: String,
+) -> Result<Invoice, CoreError> {
+    invoices::set_invoice_net_days(&db, &SystemClock, id, &net_days).await
+}
+
+#[tauri::command]
+async fn send_invoice(db: State<'_, Db>, id: i64) -> Result<Invoice, CoreError> {
+    invoices::send_invoice(&db, &SystemClock, id).await
+}
+
+#[tauri::command]
+async fn unseal_invoice(db: State<'_, Db>, id: i64) -> Result<Invoice, CoreError> {
+    invoices::unseal_invoice(&db, &SystemClock, id).await
+}
+
+#[tauri::command]
+async fn mark_paid(db: State<'_, Db>, id: i64, paid_date: String) -> Result<Invoice, CoreError> {
+    invoices::mark_paid(&db, &SystemClock, id, &paid_date).await
+}
+
+#[tauri::command]
+async fn unmark_paid(db: State<'_, Db>, id: i64) -> Result<Invoice, CoreError> {
+    invoices::unmark_paid(&db, &SystemClock, id).await
 }
 
 #[tauri::command]
@@ -292,6 +321,11 @@ pub fn run() {
             add_invoice_entry,
             remove_invoice_entry,
             set_invoice_timesheet,
+            set_invoice_net_days,
+            send_invoice,
+            unseal_invoice,
+            mark_paid,
+            unmark_paid,
             delete_invoice
         ])
         .build(tauri::generate_context!())

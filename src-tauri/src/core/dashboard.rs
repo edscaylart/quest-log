@@ -6,6 +6,7 @@ use chrono::{DateTime, Datelike, Days, Months, NaiveDate};
 use serde::{Deserialize, Serialize};
 
 use super::clients::amount;
+use super::invoices::State;
 use super::time_entries::invalid;
 use super::{Clock, CoreError, Db, Result};
 
@@ -193,31 +194,30 @@ pub async fn dashboard(db: &Db, clock: &dyn Clock, input: &PeriodInput) -> Resul
         };
     }
 
-    // Per client: name, seconds, Σ seconds × rate (rounded once at the end).
-    let mut in_period: BTreeMap<i64, (String, i64, i64)> = BTreeMap::new();
-    let mut all_time: BTreeMap<i64, i64> = BTreeMap::new();
+    // Per client: name, seconds, Σ seconds × rate per billing status (each rounded once at the end).
+    let mut in_period: BTreeMap<i64, (String, i64, Split)> = BTreeMap::new();
+    let mut all_time = Split::default();
     for row in rows {
-        *all_time.entry(row.client_id).or_default() += row.seconds * row.rate_cents;
+        all_time.add(row.state, row.seconds * row.rate_cents);
         if row.date < period.start || row.date > period.end {
             continue;
         }
         *buckets.get_mut(&bucket_of(row.date)).unwrap() += row.seconds;
-        let client = in_period
-            .entry(row.client_id)
-            .or_insert((row.client_name, 0, 0));
+        let client =
+            in_period
+                .entry(row.client_id)
+                .or_insert((row.client_name, 0, Split::default()));
         client.1 += row.seconds;
-        client.2 += row.seconds * row.rate_cents;
+        client.2.add(row.state, row.seconds * row.rate_cents);
     }
 
     let mut clients: Vec<ClientFigures> = in_period
         .into_iter()
-        .map(
-            |(client_id, (client_name, seconds, cent_seconds))| ClientFigures {
-                client_id,
-                client_name,
-                figures: uninvoiced(seconds, cent_seconds),
-            },
-        )
+        .map(|(client_id, (client_name, seconds, split))| ClientFigures {
+            client_id,
+            client_name,
+            figures: split.figures(seconds),
+        })
         .collect();
     clients.sort_by_key(|c| std::cmp::Reverse(c.figures.seconds));
     let total = clients.iter().fold(Figures::default(), |t, c| Figures {
@@ -227,6 +227,12 @@ pub async fn dashboard(db: &Db, clock: &dyn Clock, input: &PeriodInput) -> Resul
         invoiced_unpaid_cents: t.invoiced_unpaid_cents + c.figures.invoiced_unpaid_cents,
         paid_cents: t.paid_cents + c.figures.paid_cents,
     });
+    let overdue: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM invoices WHERE state = 'sent' AND due_date < ?")
+            .bind(clock.today().to_string())
+            .fetch_one(db)
+            .await?;
+    let all_time = all_time.figures(0);
 
     Ok(Dashboard {
         period,
@@ -237,24 +243,42 @@ pub async fn dashboard(db: &Db, clock: &dyn Clock, input: &PeriodInput) -> Resul
             .map(|(start, seconds)| Bucket { start, seconds })
             .collect(),
         weekly,
-        // ponytail: no invoices yet (#10), so nothing is invoiced-unpaid or overdue.
         all_time: AllTime {
-            invoiced_unpaid_cents: 0,
-            overdue: 0,
-            uninvoiced_cents: all_time.values().map(|&cs| amount(1, cs)).sum(),
+            invoiced_unpaid_cents: all_time.invoiced_unpaid_cents,
+            overdue,
+            uninvoiced_cents: all_time.uninvoiced_cents,
         },
     })
 }
 
-// ponytail: all uninvoiced until invoices (#10) split by billing status.
-fn uninvoiced(seconds: i64, cent_seconds: i64) -> Figures {
-    let cents = amount(1, cent_seconds);
-    Figures {
-        seconds,
-        earned_cents: cents,
-        uninvoiced_cents: cents,
-        invoiced_unpaid_cents: 0,
-        paid_cents: 0,
+/// Cent-seconds (seconds × cents/hour) by billing status.
+#[derive(Default)]
+struct Split {
+    uninvoiced: i64,
+    invoiced_unpaid: i64,
+    paid: i64,
+}
+
+impl Split {
+    fn add(&mut self, state: Option<State>, cent_seconds: i64) {
+        match state {
+            None | Some(State::Draft) => self.uninvoiced += cent_seconds,
+            Some(State::Sent) => self.invoiced_unpaid += cent_seconds,
+            Some(State::Paid) => self.paid += cent_seconds,
+        }
+    }
+
+    /// Earned is the sum of the rounded parts, so they always add up.
+    fn figures(&self, seconds: i64) -> Figures {
+        let [uninvoiced, invoiced_unpaid, paid] =
+            [self.uninvoiced, self.invoiced_unpaid, self.paid].map(|cs| amount(1, cs));
+        Figures {
+            seconds,
+            earned_cents: uninvoiced + invoiced_unpaid + paid,
+            uninvoiced_cents: uninvoiced,
+            invoiced_unpaid_cents: invoiced_unpaid,
+            paid_cents: paid,
+        }
     }
 }
 
@@ -267,21 +291,24 @@ struct Row {
     client_name: String,
     date: NaiveDate,
     seconds: i64,
-    /// Effective: the project's if set, else the client's.
+    /// Frozen at Send if invoiced, else live: the project's if set, else the client's.
     rate_cents: i64,
+    /// Its invoice's, if any.
+    state: Option<State>,
 }
 
 /// Every time entry, plus the running Timer as one so far.
 async fn rows(db: &Db, clock: &dyn Clock) -> Result<Vec<Row>> {
-    let entries: Vec<(i64, String, String, i64, i64)> = sqlx::query_as(
+    let entries: Vec<(i64, String, String, i64, i64, Option<State>)> = sqlx::query_as(
         "SELECT e.client_id, c.name, e.date, e.seconds, \
-         COALESCE(p.rate_cents, c.rate_cents) FROM time_entries e \
-         JOIN clients c ON c.id = e.client_id LEFT JOIN projects p ON p.id = e.project_id",
+         COALESCE(e.invoiced_rate_cents, p.rate_cents, c.rate_cents), i.state FROM time_entries e \
+         JOIN clients c ON c.id = e.client_id LEFT JOIN projects p ON p.id = e.project_id \
+         LEFT JOIN invoices i ON i.id = e.invoice_id",
     )
     .fetch_all(db)
     .await?;
     let mut rows = Vec::with_capacity(entries.len() + 1);
-    for (client_id, client_name, date, seconds, rate_cents) in entries {
+    for (client_id, client_name, date, seconds, rate_cents, state) in entries {
         rows.push(Row {
             client_id,
             client_name,
@@ -290,6 +317,7 @@ async fn rows(db: &Db, clock: &dyn Clock) -> Result<Vec<Row>> {
             })?,
             seconds,
             rate_cents,
+            state,
         });
     }
     let timer: Option<(i64, String, i64, i64)> = sqlx::query_as(
@@ -307,6 +335,7 @@ async fn rows(db: &Db, clock: &dyn Clock) -> Result<Vec<Row>> {
             date: clock.local_date(start),
             seconds: (now - start).num_seconds().max(0),
             rate_cents,
+            state: None,
         });
     }
     Ok(rows)

@@ -4,7 +4,7 @@ import { getProgress, getTimer, startTimer, toCoreError, type Overlong, type Pro
 import { label } from "./labels";
 import { ClientDetail, Clients } from "./Clients";
 import { Home } from "./Home";
-import { DraftEditor, Invoices } from "./Invoices";
+import { InvoiceDetail, Invoices } from "./Invoices";
 import { EntryModal, Log } from "./Log";
 import { Nav, type Screen } from "./nav";
 import { LevelUp } from "./Progress";
@@ -118,7 +118,7 @@ export default function App() {
             }}
           />
         ) : top?.kind === "invoice" ? (
-          <DraftEditor
+          <InvoiceDetail
             key={top.id}
             id={top.id}
             version={version}

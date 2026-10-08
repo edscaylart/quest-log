@@ -29,7 +29,7 @@ export type TimeEntry = {
   clientName: string;
   projectId: number | null;
   projectName: string | null;
-  /** The live rate: the project's if set, else the client's. */
+  /** Frozen at Send if locked, else the live rate: the project's if set, else the client's. */
   rateCents: number;
   /** Local calendar day, YYYY-MM-DD. */
   date: string;
@@ -38,6 +38,8 @@ export type TimeEntry = {
   startedAt: number | null;
   endedAt: number | null;
   note: string | null;
+  /** On a Sent or Paid invoice: read-only. */
+  locked: boolean;
 };
 export type Span = { mode: "duration"; duration: string } | { mode: "range"; start: string; end: string };
 export type EntryInput = { clientId: number; projectId: number | null; date: string; span: Span; note: string };
@@ -45,6 +47,7 @@ export type EntryInput = { clientId: number; projectId: number | null; date: str
 export type CoreError =
   | { kind: "invalid"; field: string; message: string }
   | { kind: "notFound"; message: string }
+  | { kind: "locked"; message: string }
   | { kind: "database"; message: string };
 
 export const isCoreError = (e: unknown): e is CoreError => typeof e === "object" && e !== null && "kind" in e;
@@ -157,19 +160,49 @@ export type Invoice = {
   clientName: string;
   state: InvoiceState;
   period: Period;
+  /** Given at the first Send; kept on revert. */
+  number: string | null;
+  /** Payment terms Send uses: the override, else the client's, else Settings'. */
+  netDays: number;
+  netDaysOverride: number | null;
+  /** Local days; Sent and Paid only. */
+  issueDate: string | null;
+  dueDate: string | null;
+  /** Paid only. */
+  paidDate: string | null;
+  /** Sent and past due. */
+  overdue: boolean;
   /** Print the timesheet page. */
   timesheet: boolean;
+  /** From the snapshot once Sent. */
   lines: InvoiceLine[];
   seconds: number;
   totalCents: number;
   /** Its entries, newest first. */
   entries: TimeEntry[];
-  /** The client's entries on no invoice, newest first. */
+  /** Draft only: the client's entries on no invoice, newest first. */
   available: TimeEntry[];
   /** How many of `available` fall in the period. */
   newInPeriod: number;
+  /** Frozen at Send; Sent and Paid only. */
+  snapshot: Snapshot | null;
 };
-export type InvoiceSummary = Pick<Invoice, "id" | "clientId" | "clientName" | "state" | "period" | "seconds" | "totalCents">;
+/** Everything a Sent invoice shows, frozen at Send. */
+export type Snapshot = {
+  number: string;
+  /** Local days. */
+  issueDate: string;
+  dueDate: string;
+  seller: { name: string; businessName: string | null; address: string | null; email: string | null; taxId: string | null; paymentInstructions: string | null };
+  /** `name` is the billing name, else the client's name. */
+  client: { name: string; address: string | null; email: string | null };
+  lines: InvoiceLine[];
+  /** Oldest first; `description` is the project or "General". */
+  timesheet: { date: string; description: string; note: string | null; seconds: number; startedAt: number | null; endedAt: number | null }[];
+  seconds: number;
+  totalCents: number;
+};
+export type InvoiceSummary = Pick<Invoice, "id" | "clientId" | "clientName" | "state" | "period" | "number" | "dueDate" | "overdue" | "seconds" | "totalCents">;
 /** What a new Draft would hold: entries in the period on no invoice, and how many older ones there are. */
 export type DraftCandidates = { period: Period; entries: TimeEntry[]; older: number; olderSince: string | null };
 export type NewDraft = { clientId: number; start: string; end: string; entryIds: number[] };
@@ -183,5 +216,15 @@ export const getInvoice = (id: number) => invoke<Invoice>("get_invoice", { id })
 export const addInvoiceEntry = (id: number, entryId: number) => invoke<Invoice>("add_invoice_entry", { id, entryId });
 export const removeInvoiceEntry = (id: number, entryId: number) => invoke<Invoice>("remove_invoice_entry", { id, entryId });
 export const setInvoiceTimesheet = (id: number, timesheet: boolean) => invoke<Invoice>("set_invoice_timesheet", { id, timesheet });
+/** Blank goes back to the client's or Settings' terms. */
+export const setInvoiceNetDays = (id: number, netDays: string) => invoke<Invoice>("set_invoice_net_days", { id, netDays });
+/** Draft → Sent: numbers, dates, snapshots and locks. */
+export const sendInvoice = (id: number) => invoke<Invoice>("send_invoice", { id });
+/** Sent → Draft: keeps the number, unlocks. */
+export const unsealInvoice = (id: number) => invoke<Invoice>("unseal_invoice", { id });
+/** Sent → Paid; `paidDate` is YYYY-MM-DD. */
+export const markPaid = (id: number, paidDate: string) => invoke<Invoice>("mark_paid", { id, paidDate });
+/** Paid → Sent. */
+export const unmarkPaid = (id: number) => invoke<Invoice>("unmark_paid", { id });
 /** Frees its entries. */
 export const deleteInvoice = (id: number) => invoke<void>("delete_invoice", { id });

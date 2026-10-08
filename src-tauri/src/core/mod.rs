@@ -60,6 +60,9 @@ pub enum CoreError {
     },
     #[error("{message}")]
     NotFound { message: String },
+    /// A time entry on a Sent or Paid invoice.
+    #[error("{message}")]
+    Locked { message: String },
     #[error("database error: {message}")]
     Database { message: String },
 }

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import {
   addInvoiceEntry,
   createDraft,
@@ -7,8 +7,13 @@ import {
   getInvoice,
   listClients,
   listInvoices,
+  markPaid,
   removeInvoiceEntry,
+  sendInvoice,
+  setInvoiceNetDays,
   setInvoiceTimesheet,
+  unmarkPaid,
+  unsealInvoice,
   toCoreError,
   type Client,
   type DraftCandidates,
@@ -18,7 +23,7 @@ import {
   type PeriodInput,
   type TimeEntry,
 } from "./api";
-import { formatCents, formatDay, formatInvoiceHours, formatRange, formatSeconds } from "./format";
+import { formatCents, formatDay, formatInvoiceHours, formatMonthDay, formatRange, formatSeconds, localDate } from "./format";
 import { label } from "./labels";
 import { EntryModal } from "./Log";
 import { Field, Modal } from "./Modal";
@@ -52,8 +57,11 @@ export function Invoices({ version, onChange }: { version: number; onChange: () 
                 {shown.map((i) => (
                   <li key={i.id} className="row entry">
                     <button onClick={() => push({ kind: "invoice", id: i.id })}>
-                      <span className="who">{i.clientName}</span>
-                      <span className="note">{formatRange(i.period.start, i.period.end)}</span>
+                      <span className="who">{[i.number, i.clientName].filter(Boolean).join(" · ")}</span>
+                      <span className="note">
+                        {formatRange(i.period.start, i.period.end)}
+                        {i.overdue && <strong className="error"> · Overdue</strong>}
+                      </span>
                       <span className="num">{formatCents(i.totalCents)}</span>
                     </button>
                   </li>
@@ -223,11 +231,9 @@ export function NewDraftModal({ onClose, onCreated }: { onClose: () => void; onC
   );
 }
 
-export function DraftEditor({ id, version, onChange, onDeleted }: { id: number; version: number; onChange: () => void; onDeleted: () => void }) {
+/** A Draft opens editable; Sent and Paid open read-only with their state actions. */
+export function InvoiceDetail({ id, version, onChange, onDeleted }: { id: number; version: number; onChange: () => void; onDeleted: () => void }) {
   const [invoice, setInvoice] = useState<Invoice | null>(null);
-  const [adding, setAdding] = useState(false);
-  const [editing, setEditing] = useState<TimeEntry | null>(null);
-  const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -235,54 +241,133 @@ export function DraftEditor({ id, version, onChange, onDeleted }: { id: number; 
   }, [id, version]);
 
   if (!invoice) return null;
-  const fail = (err: unknown) => setError(toCoreError(err).message);
   const update = (action: Promise<Invoice>) =>
-    action.then((next) => {
-      setInvoice(next);
-      setError(null);
-      onChange();
-    }, fail);
+    action.then(
+      (next) => {
+        setInvoice(next);
+        setError(null);
+        onChange();
+      },
+      (err) => setError(toCoreError(err).message),
+    );
+  const props = { invoice, update, error, setError, onChange, onDeleted };
+  return invoice.state === "draft" ? <DraftEditor {...props} /> : <SealedDetail {...props} />;
+}
 
+type DetailProps = {
+  invoice: Invoice;
+  update: (action: Promise<Invoice>) => Promise<void>;
+  error: string | null;
+  setError: (error: string | null) => void;
+  onChange: () => void;
+  onDeleted: () => void;
+};
+
+function Heading({ invoice }: { invoice: Invoice }) {
   return (
     <>
       <h1>
         {label.invoiceState[invoice.state]} {label.invoice} · {invoice.clientName}
       </h1>
-      <p>{formatRange(invoice.period.start, invoice.period.end)}</p>
-      <div className="scroll-x">
-        <table className="figures-table">
-          <thead>
-            <tr>
-              <th>Description</th>
-              <th>Hours</th>
-              <th>Rate</th>
-              <th>Amount</th>
+      <p>{[invoice.number, formatRange(invoice.period.start, invoice.period.end)].filter(Boolean).join(" · ")}</p>
+    </>
+  );
+}
+
+function Lines({ invoice }: { invoice: Invoice }) {
+  return (
+    <div className="scroll-x">
+      <table className="figures-table">
+        <thead>
+          <tr>
+            <th>Description</th>
+            <th>Hours</th>
+            <th>Rate</th>
+            <th>Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          {invoice.lines.map((l) => (
+            <tr key={l.projectId ?? "general"}>
+              <td>{l.description}</td>
+              <td className="num">{formatInvoiceHours(l.seconds)}</td>
+              <td className="num">{formatCents(l.rateCents)}</td>
+              <td className="num">{formatCents(l.amountCents)}</td>
             </tr>
-          </thead>
-          <tbody>
-            {invoice.lines.map((l) => (
-              <tr key={l.projectId ?? "general"}>
-                <td>{l.description}</td>
-                <td className="num">{formatInvoiceHours(l.seconds)}</td>
-                <td className="num">{formatCents(l.rateCents)}</td>
-                <td className="num">{formatCents(l.amountCents)}</td>
-              </tr>
-            ))}
-            <tr>
-              <th>Total</th>
-              <th className="num">{formatInvoiceHours(invoice.seconds)}</th>
-              <th />
-              <th className="num">{formatCents(invoice.totalCents)}</th>
-            </tr>
-          </tbody>
-        </table>
+          ))}
+          <tr>
+            <th>Total</th>
+            <th className="num">{formatInvoiceHours(invoice.seconds)}</th>
+            <th />
+            <th className="num">{formatCents(invoice.totalCents)}</th>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function ErrorLine({ error }: { error: string | null }) {
+  return (
+    error && (
+      <p className="error" role="alert">
+        {error}
+      </p>
+    )
+  );
+}
+
+/** Asks before acting; `onConfirm` acts. */
+function Confirm({ title, children, action, onClose, onConfirm }: { title: string; children: ReactNode; action: string; onClose: () => void; onConfirm: () => void }) {
+  return (
+    <Modal title={title} onClose={onClose}>
+      {children}
+      <div className="actions">
+        <button type="button" className="ghost" onClick={onClose}>
+          Cancel
+        </button>
+        <button type="button" className="primary" onClick={onConfirm}>
+          {action}
+        </button>
       </div>
+    </Modal>
+  );
+}
+
+function DraftEditor({ invoice, update, error, setError, onChange, onDeleted }: DetailProps) {
+  const id = invoice.id;
+  const [adding, setAdding] = useState(false);
+  const [editing, setEditing] = useState<TimeEntry | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [sending, setSending] = useState(false);
+  const fail = (err: unknown) => setError(toCoreError(err).message);
+
+  return (
+    <>
+      <Heading invoice={invoice} />
+      <Lines invoice={invoice} />
       <div className="toolbar">
         <label>
           <input type="checkbox" checked={invoice.timesheet} onChange={(e) => update(setInvoiceTimesheet(id, e.target.checked))} /> Timesheet page
         </label>
+        <label>
+          Net{" "}
+          <input
+            key={invoice.netDaysOverride ?? "default"}
+            className="short"
+            aria-label="Net days"
+            inputMode="numeric"
+            placeholder={String(invoice.netDays)}
+            defaultValue={invoice.netDaysOverride ?? ""}
+            onBlur={(e) => e.target.value !== String(invoice.netDaysOverride ?? "") && update(setInvoiceNetDays(id, e.target.value))}
+          />{" "}
+          days
+        </label>
         <button className="ghost" onClick={() => setDeleting(true)}>
           Delete
+        </button>
+        <button className="primary" disabled={!invoice.entries.length} onClick={() => setSending(true)}>
+          Mark as Sent
         </button>
       </div>
       {invoice.newInPeriod > 0 && (
@@ -290,11 +375,7 @@ export function DraftEditor({ id, version, onChange, onDeleted }: { id: number; 
           {invoice.newInPeriod} new uninvoiced {invoice.newInPeriod === 1 ? "entry" : "entries"} in this period
         </p>
       )}
-      {error && (
-        <p className="error" role="alert">
-          {error}
-        </p>
-      )}
+      <ErrorLine error={error} />
 
       <section className="day" aria-label="Time entries">
         <h2>
@@ -354,27 +435,121 @@ export function DraftEditor({ id, version, onChange, onDeleted }: { id: number; 
           }}
         />
       )}
+      {sending && (
+        <Confirm
+          title={`Seal this ${label.invoice}?`}
+          action="Mark as Sent"
+          onClose={() => setSending(false)}
+          onConfirm={() => {
+            setSending(false);
+            update(sendInvoice(id));
+          }}
+        >
+          <p>
+            {invoice.number ?? "It gets the next invoice number"}, issued today, due in {invoice.netDays} days. Its rates and details freeze and its time entries
+            lock. Sending it to {invoice.clientName} is up to you.
+          </p>
+        </Confirm>
+      )}
       {deleting && (
-        <Modal title={`Delete ${label.invoice}?`} onClose={() => setDeleting(false)}>
+        <Confirm
+          title={`Delete ${label.invoice}?`}
+          action="Delete"
+          onClose={() => setDeleting(false)}
+          onConfirm={() =>
+            deleteInvoice(id).then(onDeleted, (err) => {
+              setDeleting(false);
+              fail(err);
+            })
+          }
+        >
           <p>Its time entries go back to {label.uninvoiced}.</p>
-          <div className="actions">
-            <button type="button" className="ghost" onClick={() => setDeleting(false)}>
-              Cancel
+          {invoice.number && <p className="error">{invoice.number} won't be used again, leaving a gap in your invoice numbers.</p>}
+        </Confirm>
+      )}
+    </>
+  );
+}
+
+/** Sent or Paid: read-only, with its state actions. */
+function SealedDetail({ invoice, update, error }: DetailProps) {
+  const id = invoice.id;
+  const [confirming, setConfirming] = useState<"unseal" | "paid" | "unpaid" | null>(null);
+  const [paidDate, setPaidDate] = useState(() => localDate(new Date()));
+  const run = (action: Promise<Invoice>) => {
+    setConfirming(null);
+    update(action);
+  };
+  const close = () => setConfirming(null);
+
+  return (
+    <>
+      <Heading invoice={invoice} />
+      <dl className="facts">
+        <dt>Issued</dt>
+        <dd>{invoice.issueDate && formatMonthDay(invoice.issueDate)}</dd>
+        <dt>Due</dt>
+        <dd>
+          {invoice.dueDate && formatMonthDay(invoice.dueDate)}
+          {invoice.overdue && <strong className="error"> · Overdue</strong>}
+        </dd>
+        {invoice.paidDate && (
+          <>
+            <dt>Paid</dt>
+            <dd>{formatMonthDay(invoice.paidDate)}</dd>
+          </>
+        )}
+      </dl>
+      <Lines invoice={invoice} />
+      <div className="toolbar">
+        {invoice.state === "sent" ? (
+          <>
+            <button className="ghost" onClick={() => setConfirming("unseal")}>
+              Unseal
             </button>
-            <button
-              type="button"
-              className="primary"
-              onClick={() =>
-                deleteInvoice(id).then(onDeleted, (err) => {
-                  setDeleting(false);
-                  fail(err);
-                })
-              }
-            >
-              Delete
+            <button className="primary" onClick={() => setConfirming("paid")}>
+              Mark Paid
             </button>
-          </div>
-        </Modal>
+          </>
+        ) : (
+          <button className="ghost" onClick={() => setConfirming("unpaid")}>
+            Mark unpaid
+          </button>
+        )}
+      </div>
+      <ErrorLine error={error} />
+
+      <section className="day" aria-label="Time entries">
+        <h2>
+          <span>Time entries</span>
+        </h2>
+        <ul className="rows">
+          {invoice.entries.map((e) => (
+            <li key={e.id} className="row">
+              <span className="who">{formatDay(e.date)}</span>
+              <span className="note">{[e.projectName, e.note].filter(Boolean).join(" · ")}</span>
+              <span className="num">{formatSeconds(e.seconds)}</span>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      {confirming === "unseal" && (
+        <Confirm title={`Unseal ${label.invoice}?`} action="Unseal" onClose={close} onConfirm={() => run(unsealInvoice(id))}>
+          <p>It goes back to a Draft, keeping {invoice.number}. Its time entries unlock and follow live rates until you send it again.</p>
+        </Confirm>
+      )}
+      {confirming === "paid" && (
+        <Confirm title="Mark Paid?" action="Mark Paid" onClose={close} onConfirm={() => run(markPaid(id, paidDate))}>
+          <Field id="paid-date" label="Paid on" error={null}>
+            <input id="paid-date" type="date" value={paidDate} onChange={(e) => setPaidDate(e.target.value)} />
+          </Field>
+        </Confirm>
+      )}
+      {confirming === "unpaid" && (
+        <Confirm title="Mark unpaid?" action="Mark unpaid" onClose={close} onConfirm={() => run(unmarkPaid(id))}>
+          <p>It goes back to {label.invoiceState.sent} and its paid date is cleared.</p>
+        </Confirm>
       )}
     </>
   );

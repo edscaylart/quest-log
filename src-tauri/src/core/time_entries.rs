@@ -34,7 +34,7 @@ pub struct TimeEntry {
     pub client_name: String,
     pub project_id: Option<i64>,
     pub project_name: Option<String>,
-    /// The live rate: the project's if set, else the client's.
+    /// The rate frozen at Send if locked, else the live one: the project's if set, else the client's.
     pub rate_cents: i64,
     pub date: String,
     pub seconds: i64,
@@ -42,6 +42,8 @@ pub struct TimeEntry {
     pub started_at: Option<i64>,
     pub ended_at: Option<i64>,
     pub note: Option<String>,
+    /// On a Sent or Paid invoice: read-only, billed at its frozen rate.
+    pub locked: bool,
 }
 
 pub async fn create_entry(db: &Db, clock: &dyn Clock, input: EntryInput) -> Result<TimeEntry> {
@@ -83,6 +85,9 @@ pub async fn update_entry(
     input: EntryInput,
 ) -> Result<TimeEntry> {
     let current = get_entry(db, id).await?;
+    if current.locked {
+        return Err(locked());
+    }
     let v = validate(db, clock, &input, current.project_id).await?;
 
     // Moving it to another client drops it off its Draft, which is the old client's.
@@ -108,8 +113,11 @@ pub async fn update_entry(
     get_entry(db, id).await
 }
 
-/// Permanent; an entry on a Draft drops off it. Locking for Sent entries arrives with #25.
+/// Permanent; an entry on a Draft drops off it.
 pub async fn delete_entry(db: &Db, id: i64) -> Result<()> {
+    if get_entry(db, id).await?.locked {
+        return Err(locked());
+    }
     let deleted = sqlx::query("DELETE FROM time_entries WHERE id = ?")
         .bind(id)
         .execute(db)
@@ -150,8 +158,8 @@ pub async fn list_entries(db: &Db, client_id: Option<i64>) -> Result<Vec<TimeEnt
 }
 
 pub(super) const SELECT: &str = "SELECT e.id, e.client_id, c.name AS client_name, e.project_id, \
-    p.name AS project_name, COALESCE(p.rate_cents, c.rate_cents) AS rate_cents, e.date, e.seconds, \
-    e.started_at, e.ended_at, e.note FROM time_entries e JOIN clients c ON c.id = e.client_id \
+    p.name AS project_name, COALESCE(e.invoiced_rate_cents, p.rate_cents, c.rate_cents) AS rate_cents, \
+    e.date, e.seconds, e.started_at, e.ended_at, e.note, e.invoiced_rate_cents IS NOT NULL AS locked FROM time_entries e JOIN clients c ON c.id = e.client_id \
     LEFT JOIN projects p ON p.id = e.project_id";
 
 pub(super) async fn get_entry(db: &Db, id: i64) -> Result<TimeEntry> {
@@ -165,6 +173,12 @@ pub(super) async fn get_entry(db: &Db, id: i64) -> Result<TimeEntry> {
 fn not_found() -> CoreError {
     CoreError::NotFound {
         message: "Time entry not found".into(),
+    }
+}
+
+fn locked() -> CoreError {
+    CoreError::Locked {
+        message: "This time entry is on a Sent invoice; unseal it to change the entry".into(),
     }
 }
 

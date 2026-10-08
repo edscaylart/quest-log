@@ -8,6 +8,7 @@ function fakeCore(clients: Client[] = []) {
   return {
     list_clients: () => clients,
     list_time_entries: () => [],
+    list_invoices: () => [],
     get_timer: () => null,
     dashboard: emptyDashboard,
     create_client: ({ input }: Record<string, unknown>) => {

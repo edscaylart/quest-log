@@ -346,7 +346,45 @@ input::placeholder {
 
 .toolbar {
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   gap: var(--gap);
+}
+
+input.short {
+  width: 6ch;
+}
+
+/* Sealed Scroll dates */
+.facts {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px var(--gap);
+  margin: 0 0 var(--gap);
+}
+
+.facts dt {
+  font-weight: 700;
+}
+
+.facts dd {
+  margin: 0;
+}
+
+.row .note {
+  flex: 1;
+}
+
+/* A read-only form */
+fieldset.plain {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.lock {
+  padding: 10px 12px;
 }
 
 .toolbar select {

@@ -21,7 +21,7 @@ function fakeCore({ progress = lv2, timer = null as Timer | null } = {}) {
     stop_timer: (): Stopped => {
       timer = null;
       progress = { level: 3, xp: 1800, levelXp: 1800, nextLevelXp: 3600, levelUp: 3 };
-      return { kind: "saved", entry: { id: 1, clientId: 1, clientName: "Acme", projectId: null, projectName: null, rateCents: 8500, date: "2026-10-07", seconds: 900 * 60, startedAt: null, endedAt: null, note: null } };
+      return { kind: "saved", entry: { id: 1, clientId: 1, clientName: "Acme", projectId: null, projectName: null, rateCents: 8500, date: "2026-10-07", seconds: 900 * 60, startedAt: null, endedAt: null, note: null, locked: false } };
     },
   };
 }

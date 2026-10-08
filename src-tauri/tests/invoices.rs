@@ -236,7 +236,7 @@ async fn a_rate_change_reprices_an_open_draft() {
     };
     update_project(&f.db, site.id, input).await.unwrap();
 
-    let d = get_invoice(&f.db, d.id).await.unwrap();
+    let d = get_invoice(&f.db, &f.clock, d.id).await.unwrap();
     assert_eq!(
         d.lines,
         [
@@ -269,12 +269,16 @@ async fn adding_and_removing_entries_moves_them_on_and_off_the_draft() {
     .unwrap();
     assert_eq!(ids(&d.available), [old.id]);
 
-    let d = add_invoice_entry(&f.db, d.id, old.id).await.unwrap();
+    let d = add_invoice_entry(&f.db, &f.clock, d.id, old.id)
+        .await
+        .unwrap();
     assert_eq!(ids(&d.entries), [a.id, old.id], "any date of the client");
     assert_eq!((d.seconds, d.total_cents), (3 * 3600, 25500));
     assert!(d.available.is_empty());
 
-    let d = remove_invoice_entry(&f.db, d.id, a.id).await.unwrap();
+    let d = remove_invoice_entry(&f.db, &f.clock, d.id, a.id)
+        .await
+        .unwrap();
     assert_eq!(ids(&d.entries), [old.id]);
     assert_eq!(ids(&d.available), [a.id], "back to uninvoiced");
 }
@@ -303,7 +307,7 @@ async fn an_entry_sits_on_at_most_one_invoice() {
     .unwrap_err();
     assert_eq!(invalid_field(err), "entries");
     assert_eq!(
-        list_invoices(&f.db).await.unwrap().len(),
+        list_invoices(&f.db, &f.clock).await.unwrap().len(),
         1,
         "nothing half-created"
     );
@@ -315,18 +319,23 @@ async fn an_entry_sits_on_at_most_one_invoice() {
     )
     .await
     .unwrap();
-    let err = add_invoice_entry(&f.db, second.id, a.id).await.unwrap_err();
+    let err = add_invoice_entry(&f.db, &f.clock, second.id, a.id)
+        .await
+        .unwrap_err();
     assert_eq!(invalid_field(err), "entries");
-    let err = add_invoice_entry(&f.db, second.id, theirs.id)
+    let err = add_invoice_entry(&f.db, &f.clock, second.id, theirs.id)
         .await
         .unwrap_err();
     assert_eq!(invalid_field(err), "entries", "another client's entry");
-    let err = remove_invoice_entry(&f.db, second.id, a.id)
+    let err = remove_invoice_entry(&f.db, &f.clock, second.id, a.id)
         .await
         .unwrap_err();
     assert_eq!(invalid_field(err), "entries", "not on this one");
     assert_eq!(
-        ids(&get_invoice(&f.db, first.id).await.unwrap().entries),
+        ids(&get_invoice(&f.db, &f.clock, first.id)
+            .await
+            .unwrap()
+            .entries),
         [a.id]
     );
 }
@@ -369,7 +378,7 @@ async fn draft_entries_stay_editable_and_deleting_one_drops_it_from_the_draft() 
     };
     update_entry(&f.db, &f.clock, c.id, moved).await.unwrap();
 
-    let d = get_invoice(&f.db, d.id).await.unwrap();
+    let d = get_invoice(&f.db, &f.clock, d.id).await.unwrap();
     assert_eq!(
         ids(&d.entries),
         [a.id],
@@ -398,7 +407,9 @@ async fn a_draft_counts_entries_logged_into_its_period_since_it_was_created() {
     )
     .await
     .unwrap();
-    remove_invoice_entry(&f.db, d.id, removed.id).await.unwrap();
+    remove_invoice_entry(&f.db, &f.clock, d.id, removed.id)
+        .await
+        .unwrap();
     assert_eq!(
         d.new_in_period, 0,
         "{} was left out on purpose",
@@ -410,7 +421,7 @@ async fn a_draft_counts_entries_logged_into_its_period_since_it_was_created() {
     log_on(&f, acme.id, None, "2026-10-07", "1").await;
     log_on(&f, acme.id, None, "2026-09-30", "1").await;
 
-    let d = get_invoice(&f.db, d.id).await.unwrap();
+    let d = get_invoice(&f.db, &f.clock, d.id).await.unwrap();
     assert_eq!(d.new_in_period, 2);
     assert_eq!(d.entries.len(), 0, "never auto-added");
 }
@@ -458,9 +469,9 @@ async fn deleting_a_draft_frees_its_entries() {
 
     delete_invoice(&f.db, d.id).await.unwrap();
 
-    assert!(list_invoices(&f.db).await.unwrap().is_empty());
+    assert!(list_invoices(&f.db, &f.clock).await.unwrap().is_empty());
     assert!(matches!(
-        get_invoice(&f.db, d.id).await,
+        get_invoice(&f.db, &f.clock, d.id).await,
         Err(CoreError::NotFound { .. })
     ));
     let c = draft_candidates(&f.db, &f.clock, acme.id, None)
@@ -483,12 +494,12 @@ async fn timesheet_page_is_on_by_default_and_toggles() {
     assert!(d.timesheet);
 
     assert!(
-        !set_invoice_timesheet(&f.db, d.id, false)
+        !set_invoice_timesheet(&f.db, &f.clock, d.id, false)
             .await
             .unwrap()
             .timesheet
     );
-    assert!(!get_invoice(&f.db, d.id).await.unwrap().timesheet);
+    assert!(!get_invoice(&f.db, &f.clock, d.id).await.unwrap().timesheet);
 }
 
 #[tokio::test]
@@ -512,7 +523,7 @@ async fn invoices_list_newest_first_with_totals() {
     .await
     .unwrap();
 
-    let list = list_invoices(&f.db).await.unwrap();
+    let list = list_invoices(&f.db, &f.clock).await.unwrap();
 
     let rows: Vec<_> = list
         .iter()

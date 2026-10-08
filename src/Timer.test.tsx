@@ -155,7 +155,7 @@ describe("HUD Timer", () => {
   });
 
   it("▶ on a Log row resumes with the same Patron and note", async () => {
-    const entry: TimeEntry = { id: 1, clientId: 2, clientName: "Bolt", projectId: null, projectName: null, rateCents: 8500, date: "2026-10-06", seconds: 600, startedAt: null, endedAt: null, note: "Kickoff" };
+    const entry: TimeEntry = { id: 1, clientId: 2, clientName: "Bolt", projectId: null, projectName: null, rateCents: 8500, date: "2026-10-06", seconds: 600, startedAt: null, endedAt: null, note: "Kickoff", locked: false };
     const { user, calls } = renderWithIpc(<App />, fakeCore({ entries: [entry] }));
     await user.click(screen.getByRole("tab", { name: "Log" }));
 
@@ -166,7 +166,7 @@ describe("HUD Timer", () => {
   });
 
   it("shows a failed Stop or Resume instead of swallowing it", async () => {
-    const entry: TimeEntry = { id: 1, clientId: 2, clientName: "Bolt", projectId: null, projectName: null, rateCents: 8500, date: "2026-10-06", seconds: 600, startedAt: null, endedAt: null, note: null };
+    const entry: TimeEntry = { id: 1, clientId: 2, clientName: "Bolt", projectId: null, projectName: null, rateCents: 8500, date: "2026-10-06", seconds: 600, startedAt: null, endedAt: null, note: null, locked: false };
     const { user } = renderWithIpc(<App />, {
       ...fakeCore({ timer: { clientId: 1, clientName: "Acme", projectId: null, projectName: null, startedAt: minutesAgo(5), note: null }, entries: [entry] }),
       stop_timer: () => {

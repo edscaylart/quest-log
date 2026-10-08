@@ -19,6 +19,7 @@ const entry = (fields: Partial<TimeEntry> & Pick<TimeEntry, "id">): TimeEntry =>
   startedAt: null,
   endedAt: null,
   note: null,
+  locked: false,
   ...fields,
 });
 const mon = entry({ id: 1, date: "2026-10-05", note: "Kickoff" });
@@ -31,6 +32,13 @@ const draft = (fields: Partial<Invoice> = {}): Invoice => ({
   clientName: "Acme",
   state: "draft",
   period: { start: "2026-10-01", end: "2026-10-07" },
+  number: null,
+  netDays: 30,
+  netDaysOverride: null,
+  issueDate: null,
+  dueDate: null,
+  paidDate: null,
+  overdue: false,
   timesheet: true,
   lines: [
     { projectId: 7, description: "Website", seconds: 5400, rateCents: 12000, amountCents: 18000 },
@@ -41,6 +49,7 @@ const draft = (fields: Partial<Invoice> = {}): Invoice => ({
   entries: [tue, mon],
   available: [old],
   newInPeriod: 0,
+  snapshot: null,
   ...fields,
 });
 
@@ -85,8 +94,22 @@ function fakeCore({ invoices = [] as InvoiceSummary[], invoice = draft() } = {})
       list = [];
       return null;
     },
+    send_invoice: () => {
+      current = { ...current, ...sealed };
+      return current;
+    },
+    unseal_invoice: () => {
+      current = { ...current, state: "draft", issueDate: null, dueDate: null, snapshot: null };
+      return current;
+    },
+    mark_paid: ({ paidDate }: Record<string, unknown>) => {
+      current = { ...current, state: "paid", paidDate: paidDate as string };
+      return current;
+    },
   };
 }
+
+const sealed: Partial<Invoice> = { state: "sent", number: "INV-0001", issueDate: "2026-10-07", dueDate: "2026-11-06", available: [] };
 
 async function openScrolls(core: ReturnType<typeof fakeCore>) {
   const rendered = renderWithIpc(<App />, core);
@@ -97,7 +120,7 @@ async function openScrolls(core: ReturnType<typeof fakeCore>) {
 
 describe("Scrolls", () => {
   it("groups Scrolls under Unsealed and opens a Draft", async () => {
-    const summary: InvoiceSummary = { id: 9, clientId: 1, clientName: "Acme", state: "draft", period: { start: "2026-10-01", end: "2026-10-07" }, seconds: 9061, totalCents: 26644 };
+    const summary: InvoiceSummary = { id: 9, clientId: 1, clientName: "Acme", state: "draft", period: { start: "2026-10-01", end: "2026-10-07" }, number: null, dueDate: null, overdue: false, seconds: 9061, totalCents: 26644 };
     const { user } = await openScrolls(fakeCore({ invoices: [summary] }));
 
     const unsealed = await screen.findByRole("region", { name: "Unsealed" });
@@ -218,5 +241,81 @@ describe("Draft editor", () => {
     expect(calls.some((c) => c.cmd === "delete_invoice")).toBe(true);
     expect(await screen.findByRole("heading", { name: "Scrolls" })).toBeInTheDocument();
     expect(screen.getByText("No Scrolls yet.")).toBeInTheDocument();
+  });
+});
+
+describe("Send / Paid", () => {
+  async function open(invoice: Invoice) {
+    const rendered = await openScrolls(fakeCore({ invoices: [{ ...invoice }], invoice }));
+    await rendered.user.click(await screen.findByRole("button", { name: /Acme/ }));
+    await screen.findByRole("heading", { name: new RegExp(`Scroll · Acme`) });
+    return rendered;
+  }
+
+  it("marks a Draft as Sent after a confirm and shows it read-only", async () => {
+    const { user, calls } = await open(draft());
+
+    await user.click(screen.getByRole("button", { name: "Mark as Sent" }));
+    const dialog = await screen.findByRole("dialog", { name: "Seal this Scroll?" });
+    expect(within(dialog).getByText(/due in 30 days/)).toBeInTheDocument();
+    await user.click(within(dialog).getByRole("button", { name: "Mark as Sent" }));
+
+    expect(calls.find((c) => c.cmd === "send_invoice")?.args).toEqual({ id: 9 });
+    expect(await screen.findByRole("heading", { name: "Sealed Scroll · Acme" })).toBeInTheDocument();
+    expect(screen.getByText(/INV-0001/)).toBeInTheDocument();
+    expect(screen.getByText("Nov 6")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Remove/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "+ Add entry" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("checkbox", { name: "Timesheet page" })).not.toBeInTheDocument();
+    expect(within(screen.getByRole("region", { name: "Time entries" })).getByText("Kickoff")).toBeInTheDocument();
+  });
+
+  it("can't send a Draft with no entries", async () => {
+    await open(draft({ entries: [] }));
+    expect(screen.getByRole("button", { name: "Mark as Sent" })).toBeDisabled();
+  });
+
+  it("marks a Sent Scroll Paid on the chosen date", async () => {
+    const { user, calls } = await open(draft(sealed));
+
+    await user.click(screen.getByRole("button", { name: "Mark Paid" }));
+    const dialog = await screen.findByRole("dialog", { name: "Mark Paid?" });
+    const date = within(dialog).getByLabelText("Paid on");
+    await user.clear(date);
+    await user.type(date, "2026-10-20");
+    await user.click(within(dialog).getByRole("button", { name: "Mark Paid" }));
+
+    expect(calls.find((c) => c.cmd === "mark_paid")?.args).toEqual({ id: 9, paidDate: "2026-10-20" });
+    expect(await screen.findByRole("heading", { name: "Redeemed Scroll · Acme" })).toBeInTheDocument();
+    expect(screen.getByText("Oct 20")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Mark unpaid" })).toBeInTheDocument();
+  });
+
+  it("unseals back to an editable Draft", async () => {
+    const { user, calls } = await open(draft(sealed));
+
+    await user.click(screen.getByRole("button", { name: "Unseal" }));
+    await user.click(within(await screen.findByRole("dialog", { name: "Unseal Scroll?" })).getByRole("button", { name: "Unseal" }));
+
+    expect(calls.some((c) => c.cmd === "unseal_invoice")).toBe(true);
+    expect(await screen.findByRole("heading", { name: "Unsealed Scroll · Acme" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Mark as Sent" })).toBeInTheDocument();
+  });
+
+  it("warns that deleting a numbered Draft leaves a gap", async () => {
+    const { user } = await open(draft({ number: "INV-0004" }));
+
+    await user.click(screen.getByRole("button", { name: "Delete" }));
+    const dialog = await screen.findByRole("dialog", { name: "Delete Scroll?" });
+    expect(within(dialog).getByText(/INV-0004 won't be used again/)).toBeInTheDocument();
+  });
+
+  it("lists Sealed Scrolls with their number and flags overdue ones", async () => {
+    const summary: InvoiceSummary = { ...draft(sealed), overdue: true };
+    await openScrolls(fakeCore({ invoices: [summary] }));
+
+    const sealedGroup = await screen.findByRole("region", { name: "Sealed" });
+    expect(within(sealedGroup).getByText("INV-0001 · Acme")).toBeInTheDocument();
+    expect(within(sealedGroup).getByText(/Overdue/)).toBeInTheDocument();
   });
 });

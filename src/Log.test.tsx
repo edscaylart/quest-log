@@ -10,7 +10,7 @@ const bolt: Client = { id: 2, name: "Bolt", rateCents: 12000, billingName: null,
 const unix = (...local: [number, number, number, number, number]) => new Date(...local).getTime() / 1000;
 
 function entry(fields: Partial<TimeEntry> & Pick<TimeEntry, "id" | "date" | "seconds">): TimeEntry {
-  return { clientId: 1, clientName: "Acme", projectId: null, projectName: null, rateCents: 8500, startedAt: null, endedAt: null, note: null, ...fields };
+  return { clientId: 1, clientName: "Acme", projectId: null, projectName: null, rateCents: 8500, startedAt: null, endedAt: null, note: null, locked: false, ...fields };
 }
 
 function fakeCore(entries: TimeEntry[] = [], lastUsed: number | null = null) {
@@ -162,6 +162,25 @@ describe("Log", () => {
 
     expect(calls).toContainEqual({ cmd: "delete_time_entry", args: { id: 7 } });
     expect(await screen.findByText("No time logged yet.")).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("marks locked entries and opens them read-only", async () => {
+    const { user } = await openLog(
+      fakeCore([entry({ id: 8, date: "2026-10-06", seconds: 3600, note: "Billed", locked: true }), entry({ id: 7, date: "2026-10-05", seconds: 600 })]),
+    );
+
+    const rows = await screen.findAllByRole("listitem");
+    expect(within(rows[0]).getByRole("img", { name: "Locked" })).toBeInTheDocument();
+    expect(within(rows[1]).queryByRole("img", { name: "Locked" })).not.toBeInTheDocument();
+
+    await user.click(within(rows[0]).getByRole("button", { name: /Billed/ }));
+    const dialog = screen.getByRole("dialog", { name: "Time entry" });
+    expect(within(dialog).getByText(/Unseal it to change this entry/)).toBeInTheDocument();
+    expect(within(dialog).getByLabelText("Note")).toBeDisabled();
+    expect(within(dialog).queryByRole("button", { name: "Save" })).not.toBeInTheDocument();
+    expect(within(dialog).queryByRole("button", { name: "Delete" })).not.toBeInTheDocument();
+    await user.click(within(dialog).getByRole("button", { name: "Close" }));
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 

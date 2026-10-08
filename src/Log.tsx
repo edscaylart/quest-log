@@ -93,6 +93,11 @@ export function Log({
                   <span className="note">{e.note}</span>
                   <span className="num">{formatSeconds(e.seconds)}</span>
                 </button>
+                {e.locked && (
+                  <span className="lock" role="img" aria-label="Locked" title={`On a ${label.invoiceState.sent} ${label.invoice}`}>
+                    🔒
+                  </span>
+                )}
                 <button className="ghost icon" aria-label="Resume" onClick={() => onResume(e)}>
                   ▶
                 </button>
@@ -148,7 +153,7 @@ function byDay(entries: TimeEntry[]) {
 /** Like formatSeconds, but keeps leftover seconds so an untouched edit saves the same duration. */
 const editableDuration = (s: number) => (s % 60 ? formatClock(s) : formatSeconds(s));
 
-/** New (neither prop), edit (`entry`), or fix a Timer that ran over 24 hours (`overlong`). */
+/** New (neither prop), edit (`entry`; read-only if locked), or fix a Timer that ran over 24 hours (`overlong`). */
 export function EntryModal({
   entry,
   overlong,
@@ -161,6 +166,7 @@ export function EntryModal({
   onSaved: () => void;
 }) {
   const initial = entry ?? overlong;
+  const locked = !!entry?.locked;
   const [clients, setClients] = useState<Client[] | null>(null);
   const [clientId, setClientId] = useState(initial?.clientId ?? 0);
   const [projectId, setProjectId] = useState(initial?.projectId ?? null);
@@ -224,8 +230,13 @@ export function EntryModal({
   }
 
   return (
-    <Modal title={overlong ? "Fix Timer entry" : entry ? "Edit time entry" : "New time entry"} onClose={onClose}>
+    <Modal title={overlong ? "Fix Timer entry" : locked ? "Time entry" : entry ? "Edit time entry" : "New time entry"} onClose={onClose}>
       {overlong && <p className="hint">The Timer ran over 24 hours. Fix the duration to save it, or discard it.</p>}
+      {locked && (
+        <p className="hint">
+          🔒 On a {label.invoiceState.sent} {label.invoice}. Unseal it to change this entry.
+        </p>
+      )}
       {clients?.length === 0 ? (
         <>
           <p className="hint">Add a {label.client} first.</p>
@@ -237,6 +248,7 @@ export function EntryModal({
         </>
       ) : (
         <form onSubmit={submit} noValidate>
+          <fieldset className="plain" disabled={locked}>
           <Field id="entry-client" label={label.client} error={fieldError("client")}>
             <select
               id="entry-client"
@@ -297,9 +309,10 @@ export function EntryModal({
           <Field id="entry-note" label="Note" error={fieldError("note")}>
             <input id="entry-note" value={note} onChange={(e) => setNote(e.target.value)} />
           </Field>
+          </fieldset>
           {error && error.kind !== "invalid" && <p className="error">{error.message}</p>}
           <div className="actions">
-            {entry && (
+            {entry && !locked && (
               <button type="button" className="ghost" onClick={() => setConfirmingDelete(true)}>
                 Delete
               </button>
@@ -310,11 +323,13 @@ export function EntryModal({
               </button>
             )}
             <button type="button" className="ghost" onClick={onClose}>
-              Cancel
+              {locked ? "Close" : "Cancel"}
             </button>
-            <button type="submit" className="primary" disabled={busy || !clients}>
-              Save
-            </button>
+            {!locked && (
+              <button type="submit" className="primary" disabled={busy || !clients}>
+                Save
+              </button>
+            )}
           </div>
         </form>
       )}

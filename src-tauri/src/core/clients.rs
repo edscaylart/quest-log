@@ -93,17 +93,7 @@ pub async fn update_client(db: &Db, id: i64, input: ClientEdit) -> Result<Client
     if email.is_some_and(|e| !e.contains('@')) {
         return Err(invalid("email", "Email must look like name@example.com"));
     }
-    let net_days = match blank_to_none(&input.net_days) {
-        None => None,
-        Some(text) => Some(
-            text.parse::<i64>()
-                .ok()
-                .filter(|d| (0..=365).contains(d))
-                .ok_or_else(|| {
-                    invalid("netDays", "Net days must be a whole number from 0 to 365")
-                })?,
-        ),
-    };
+    let net_days = parse_net_days(&input.net_days)?;
 
     let updated = sqlx::query(
         "UPDATE clients SET name = ?, rate_cents = ?, billing_name = ?, address = ?, email = ?, net_days = ? \
@@ -127,14 +117,13 @@ pub async fn update_client(db: &Db, id: i64, input: ClientEdit) -> Result<Client
 
 /// What changing the client's rate to `rate` would do to its uninvoiced time
 /// that follows the client rate (no project, or a project without its own).
-// ponytail: every entry is uninvoiced until invoices exist.
 pub async fn preview_client_rate(db: &Db, id: i64, rate: &str) -> Result<Repricing> {
     let new = parse_rate(rate)?;
     let client = get_client(db, id).await?;
     let seconds: i64 = sqlx::query_scalar(
         "SELECT COALESCE(SUM(e.seconds), 0) FROM time_entries e \
          LEFT JOIN projects p ON p.id = e.project_id \
-         WHERE e.client_id = ? AND p.rate_cents IS NULL",
+         WHERE e.client_id = ? AND p.rate_cents IS NULL AND e.invoiced_rate_cents IS NULL",
     )
     .bind(id)
     .fetch_one(db)
@@ -154,6 +143,18 @@ pub(super) fn repricing(seconds: i64, old_rate: i64, new_rate: i64) -> Repricing
 /// Seconds × cents/hour, rounded half up to the cent.
 pub(super) fn amount(seconds: i64, rate_cents: i64) -> i64 {
     (seconds * rate_cents + 1800) / 3600
+}
+
+/// Payment terms override as typed; blank is `None`, the default.
+pub(super) fn parse_net_days(text: &str) -> Result<Option<i64>> {
+    blank_to_none(text)
+        .map(|text| {
+            text.parse::<i64>()
+                .ok()
+                .filter(|d| (0..=365).contains(d))
+                .ok_or_else(|| invalid("netDays", "Net days must be a whole number from 0 to 365"))
+        })
+        .transpose()
 }
 
 pub(super) fn blank_to_none(text: &str) -> Option<&str> {
