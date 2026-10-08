@@ -5,6 +5,7 @@ use tauri::{Manager, State};
 
 use crate::core::clients::{self, Client, ClientEdit, NewClient, Repricing};
 use crate::core::dashboard::{self, Dashboard, PeriodInput};
+use crate::core::progress::{self, Progress};
 use crate::core::projects::{self, Project, ProjectInput};
 use crate::core::time_entries::{self, EntryInput, LastUsed, TimeEntry};
 use crate::core::timer::{self, Stopped, Timer, TimerEdit, TimerStart};
@@ -159,6 +160,16 @@ async fn dashboard(db: State<'_, Db>, input: PeriodInput) -> Result<Dashboard, C
     dashboard::dashboard(&db, &SystemClock, &input).await
 }
 
+#[tauri::command]
+async fn progress(db: State<'_, Db>) -> Result<Progress, CoreError> {
+    progress::progress(&db).await
+}
+
+#[tauri::command]
+async fn acknowledge_level_up(db: State<'_, Db>, level: i64) -> Result<(), CoreError> {
+    progress::acknowledge_level_up(&db, level).await
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -201,7 +212,9 @@ pub fn run() {
             update_timer,
             finish_timer,
             discard_timer,
-            dashboard
+            dashboard,
+            progress,
+            acknowledge_level_up
         ])
         .build(tauri::generate_context!())
         .expect("error while building Quest Log")

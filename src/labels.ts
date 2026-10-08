@@ -12,4 +12,5 @@ export const label = {
   uninvoiced: "Unclaimed",
   invoicedUnpaid: "Owed",
   paid: "Treasury",
+  level: "Lv",
 } as const;

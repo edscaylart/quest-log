@@ -119,3 +119,10 @@ export type Dashboard = {
 
 /** Includes the running Timer, live. */
 export const getDashboard = (input: PeriodInput) => invoke<Dashboard>("dashboard", { input });
+
+/** XP is one per tracked minute; `levelXp`/`nextLevelXp` bound the current Level. */
+export type Progress = { level: number; xp: number; levelXp: number; nextLevelXp: number; /** A new highest Level not yet celebrated. */ levelUp: number | null };
+/** From saved time entries only, so a running Timer counts once stopped. */
+export const getProgress = () => invoke<Progress>("progress");
+/** The level-up for `level` was shown; never lowers the highest. */
+export const acknowledgeLevelUp = (level: number) => invoke<void>("acknowledge_level_up", { level });

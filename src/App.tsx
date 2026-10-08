@@ -1,11 +1,12 @@
 import { listen } from "@tauri-apps/api/event";
 import { useEffect, useReducer, useState } from "react";
-import { getTimer, startTimer, toCoreError, type Overlong, type Stopped, type Timer } from "./api";
+import { getProgress, getTimer, startTimer, toCoreError, type Overlong, type Progress, type Stopped, type Timer } from "./api";
 import { label } from "./labels";
 import { ClientDetail, Clients } from "./Clients";
 import { Home } from "./Home";
 import { EntryModal, Log } from "./Log";
 import { Nav, type Screen } from "./nav";
+import { LevelUp } from "./Progress";
 import { ProjectDetail } from "./Projects";
 import { Hud } from "./Timer";
 
@@ -42,8 +43,11 @@ export default function App() {
   const [timerError, setTimerError] = useState<string | null>(null);
   const failed = (err: unknown) => setTimerError(toCoreError(err).message);
 
+  const [progress, setProgress] = useState<Progress | null>(null);
+
   useEffect(() => {
     getTimer().then(setTimer);
+    getProgress().then(setProgress);
   }, [version]);
 
   const stopped = (outcome: Stopped | null) => {
@@ -80,7 +84,8 @@ export default function App() {
 
   return (
     <div className="app">
-      <Hud timer={timer} version={version} error={timerError} onStopped={stopped} onChange={() => stopped(null)} onError={failed} />
+      <Hud timer={timer} progress={progress} version={version} error={timerError} onStopped={stopped} onChange={() => stopped(null)} onError={failed} />
+      <LevelUp level={progress?.levelUp ?? null} />
       <main>
         <Nav.Provider value={{ push: (screen) => setStack([...stack, screen]) }}>
         {top && (
@@ -110,6 +115,7 @@ export default function App() {
             creating={newEntry}
             setCreating={setNewEntry}
             version={version}
+            onChange={changed}
             onResume={(e) => startTimer({ clientId: e.clientId, projectId: e.projectId, note: e.note }).then(stopped, failed)}
           />
         ) : (

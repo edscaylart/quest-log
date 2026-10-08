@@ -21,17 +21,20 @@ import { Field, Modal, ProjectField } from "./Modal";
 
 /**
  * `creating` lives in App so ⌘N can open the new-entry modal from any tab.
- * `version` changes when entries changed elsewhere (e.g. a Timer stopped).
+ * `version` changes when entries changed elsewhere (e.g. a Timer stopped);
+ * `onChange` reports a saved or deleted entry, which bumps it.
  */
 export function Log({
   creating,
   setCreating,
   version,
+  onChange,
   onResume,
 }: {
   creating: boolean;
   setCreating: (open: boolean) => void;
   version: number;
+  onChange: () => void;
   onResume: (entry: TimeEntry) => void;
 }) {
   const [clients, setClients] = useState<Client[]>([]);
@@ -39,12 +42,11 @@ export function Log({
   const [entries, setEntries] = useState<TimeEntry[] | null>(null);
   const [editing, setEditing] = useState<TimeEntry | null>(null);
 
-  const reload = () => listTimeEntries(clientId).then(setEntries);
   useEffect(() => {
     listClients().then(setClients);
   }, []);
   useEffect(() => {
-    reload();
+    listTimeEntries(clientId).then(setEntries);
   }, [clientId, version]);
 
   const close = () => {
@@ -53,7 +55,7 @@ export function Log({
   };
   const saved = () => {
     close();
-    reload();
+    onChange();
   };
 
   return (

@@ -126,6 +126,34 @@ main {
   background: var(--paper);
 }
 
+.xp > span {
+  display: block;
+  height: 100%;
+  background: var(--dark);
+}
+
+.level-up {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gap);
+  padding: 8px 16px;
+  border-bottom: var(--border);
+  background: var(--dark);
+  color: var(--paper);
+  animation: slide-in 200ms steps(4);
+}
+
+.level-up .icon {
+  color: inherit;
+}
+
+@keyframes slide-in {
+  from {
+    transform: translateY(-100%);
+  }
+}
+
 .tabbar {
   display: grid;
   grid-template-columns: repeat(4, 1fr);

@@ -11,11 +11,13 @@ import {
   type Client,
   type CoreError,
   type Stopped,
+  type Progress,
   type Timer,
 } from "./api";
 import { clientAndProject, formatClock, localDate, localTime } from "./format";
 import { label } from "./labels";
 import { Field, Modal, ProjectField } from "./Modal";
+import { Level } from "./Progress";
 
 const STILL_WORKING_SECONDS = 12 * 3600;
 
@@ -35,6 +37,7 @@ function useElapsed(startedAt: number) {
  */
 export function Hud({
   timer,
+  progress,
   version,
   error,
   onStopped,
@@ -42,6 +45,7 @@ export function Hud({
   onError,
 }: {
   timer: Timer | null;
+  progress: Progress | null;
   version: number;
   error: string | null;
   onStopped: (outcome: Stopped | null) => void;
@@ -90,8 +94,7 @@ export function Hud({
         </p>
       )}
       <div className="level">
-        <span className="num">Lv 1</span>
-        <span className="xp" aria-label="XP" />
+        {progress && <Level progress={progress} />}
         <button className="ghost icon" disabled aria-label="Settings">
           ⚙
         </button>
