@@ -1,4 +1,4 @@
-import { screen, within } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import App from "./App";
 import type { Client, DraftCandidates, Invoice, InvoiceSummary, TimeEntry } from "./api";
@@ -109,7 +109,24 @@ function fakeCore({ invoices = [] as InvoiceSummary[], invoice = draft() } = {})
   };
 }
 
-const sealed: Partial<Invoice> = { state: "sent", number: "INV-0001", issueDate: "2026-10-07", dueDate: "2026-11-06", available: [] };
+const sealed: Partial<Invoice> = {
+  state: "sent",
+  number: "INV-0001",
+  issueDate: "2026-10-07",
+  dueDate: "2026-11-06",
+  available: [],
+  snapshot: {
+    number: "INV-0001",
+    issueDate: "2026-10-07",
+    dueDate: "2026-11-06",
+    seller: { name: "Ada", businessName: null, address: null, email: null, taxId: null, paymentInstructions: null },
+    client: { name: "Acme", address: null, email: null },
+    lines: draft().lines,
+    timesheet: [],
+    seconds: 9061,
+    totalCents: 26644,
+  },
+};
 
 async function openScrolls(core: ReturnType<typeof fakeCore>) {
   const rendered = renderWithIpc(<App />, core);
@@ -245,8 +262,8 @@ describe("Draft editor", () => {
 });
 
 describe("Send / Paid", () => {
-  async function open(invoice: Invoice) {
-    const rendered = await openScrolls(fakeCore({ invoices: [{ ...invoice }], invoice }));
+  async function open(invoice: Invoice, plugins: Record<string, (args: Record<string, unknown>) => unknown> = {}) {
+    const rendered = await openScrolls({ ...fakeCore({ invoices: [{ ...invoice }], invoice }), ...plugins });
     await rendered.user.click(await screen.findByRole("button", { name: /Acme/ }));
     await screen.findByRole("heading", { name: new RegExp(`Scroll · Acme`) });
     return rendered;
@@ -289,6 +306,27 @@ describe("Send / Paid", () => {
     expect(await screen.findByRole("heading", { name: "Redeemed Scroll · Acme" })).toBeInTheDocument();
     expect(screen.getByText("Oct 20")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Mark unpaid" })).toBeInTheDocument();
+  });
+
+  it("exports a Sent invoice as a PDF wherever the save dialog says", async () => {
+    const { user, calls } = await open(draft(sealed), { "plugin:dialog|save": () => "/tmp/out.pdf", "plugin:fs|write_file": () => null });
+
+    await user.click(screen.getByRole("button", { name: "Export PDF" }));
+
+    await waitFor(() => expect(calls.some((c) => c.cmd === "plugin:fs|write_file")).toBe(true));
+    const { options } = calls.find((c) => c.cmd === "plugin:dialog|save")!.args as { options: { defaultPath: string } };
+    expect(options.defaultPath).toBe("INV-0001 – Acme – 2026-10.pdf");
+    const bytes = calls.find((c) => c.cmd === "plugin:fs|write_file")!.args as unknown as Uint8Array;
+    expect(new TextDecoder().decode(bytes.slice(0, 5))).toBe("%PDF-");
+  });
+
+  it("writes nothing when the save dialog is cancelled", async () => {
+    const { user, calls } = await open(draft(sealed), { "plugin:dialog|save": () => null });
+
+    await user.click(screen.getByRole("button", { name: "Export PDF" }));
+
+    await waitFor(() => expect(calls.some((c) => c.cmd === "plugin:dialog|save")).toBe(true));
+    expect(calls.some((c) => c.cmd === "plugin:fs|write_file")).toBe(false);
   });
 
   it("unseals back to an editable Draft", async () => {

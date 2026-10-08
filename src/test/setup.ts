@@ -4,6 +4,8 @@ import { clearMocks } from "@tauri-apps/api/mocks";
 import { afterEach } from "vitest";
 
 afterEach(async () => {
+  // Node-environment tests (PDFs) have no DOM or IPC to clear.
+  if (typeof window === "undefined") return;
   cleanup();
   // Unmounting unlistens events asynchronously; let that finish before the mocks go.
   await new Promise((r) => setTimeout(r));

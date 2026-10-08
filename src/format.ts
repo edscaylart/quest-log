@@ -7,16 +7,20 @@ const pad = (n: number) => String(n).padStart(2, "0");
 /** 5400 → "1:30". Tracked time in the app is always H:MM. */
 export const formatSeconds = (seconds: number) => `${Math.floor(seconds / 3600)}:${pad(Math.floor(seconds / 60) % 60)}`;
 
+/** "2026-10-06" → that local calendar day. */
+function day(date: string) {
+  const [y, m, d] = date.split("-").map(Number);
+  return new Date(y, m - 1, d);
+}
+
 /** "2026-10-06" → "Tue, Oct 6". */
 export function formatDay(date: string) {
-  const [y, m, d] = date.split("-").map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+  return day(date).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
 }
 
 /** "2026-10-06" → "Oct 6". */
 export function formatMonthDay(date: string) {
-  const [y, m, d] = date.split("-").map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return day(date).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
 /** "Oct 5 – Oct 11, 2026", or with both years when they differ. */
@@ -46,3 +50,8 @@ export const formatInvoiceHours = (seconds: number) => (seconds / 3600).toFixed(
 /** "Acme · Website", or just "Acme". */
 export const clientAndProject = (x: { clientName: string; projectName: string | null }) =>
   x.projectName ? `${x.clientName} · ${x.projectName}` : x.clientName;
+
+/** "2026-10-07" → "Oct 7, 2026". Dates a client reads. */
+export function formatDate(date: string) {
+  return day(date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}

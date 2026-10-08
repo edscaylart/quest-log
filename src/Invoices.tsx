@@ -472,8 +472,19 @@ function DraftEditor({ invoice, update, error, setError, onChange, onDeleted }: 
 }
 
 /** Sent or Paid: read-only, with its state actions. */
-function SealedDetail({ invoice, update, error }: DetailProps) {
+function SealedDetail({ invoice, update, error, setError }: DetailProps) {
   const id = invoice.id;
+  const [exporting, setExporting] = useState(false);
+  const exportPdf = () => {
+    if (!invoice.snapshot) return;
+    setExporting(true);
+    const sent = { ...invoice, snapshot: invoice.snapshot };
+    // react-pdf is big; load it on first export, not at startup.
+    import("./InvoicePdf")
+      .then((pdf) => pdf.exportInvoicePdf(sent))
+      .then(() => setError(null), (err) => setError(`Couldn't export the PDF: ${toCoreError(err).message}`))
+      .finally(() => setExporting(false));
+  };
   const [confirming, setConfirming] = useState<"unseal" | "paid" | "unpaid" | null>(null);
   const [paidDate, setPaidDate] = useState(() => localDate(new Date()));
   const run = (action: Promise<Invoice>) => {
@@ -502,6 +513,9 @@ function SealedDetail({ invoice, update, error }: DetailProps) {
       </dl>
       <Lines invoice={invoice} />
       <div className="toolbar">
+        <button className="ghost" disabled={exporting || !invoice.snapshot} onClick={exportPdf}>
+          Export PDF
+        </button>
         {invoice.state === "sent" ? (
           <>
             <button className="ghost" onClick={() => setConfirming("unseal")}>
