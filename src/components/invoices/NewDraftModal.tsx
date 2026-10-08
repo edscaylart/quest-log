@@ -1,0 +1,147 @@
+import { useEffect, useState } from "react";
+import { Field } from "@/components/ui/Field";
+import { Modal } from "@/components/ui/Modal";
+import { createDraft, draftCandidates, listClients } from "@/integrations/tauri/commands";
+import type { Client } from "@/lib/clients/types";
+import { toCoreError } from "@/lib/errors";
+import { formatRange } from "@/lib/format";
+import { entryLabel } from "@/lib/invoices/entryLabel";
+import { periodInput, type PeriodChoice } from "@/lib/invoices/periodInput";
+import type { DraftCandidates } from "@/lib/invoices/types";
+import { label } from "@/lib/labels";
+
+const choices = [
+  { kind: "2w", title: "Last 2 weeks" },
+  { kind: "month", title: "Last month" },
+] as const;
+
+export function NewDraftModal({ onClose, onCreated }: { onClose: () => void; onCreated: (id: number) => void }) {
+  const [clients, setClients] = useState<Client[] | null>(null);
+  const [clientId, setClientId] = useState(0);
+  const [choice, setChoice] = useState<PeriodChoice>({ kind: "default" });
+  const [candidates, setCandidates] = useState<DraftCandidates | null>(null);
+  const [unticked, setUnticked] = useState<Set<number>>(new Set());
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    listClients().then((all) => {
+      // A retired client only while it has time left to bill.
+      const list = all.filter((c) => !c.archived || c.hasAvailable);
+      setClients(list);
+      setClientId(list[0]?.id ?? 0);
+    });
+  }, []);
+
+  const custom = choice.kind === "custom" ? choice : null;
+  useEffect(() => {
+    if (!clientId) return;
+    let current = true;
+    draftCandidates(clientId, periodInput(choice)).then(
+      (c) => {
+        if (!current) return;
+        setCandidates(c);
+        setError(null);
+      },
+      (err) => current && setError(toCoreError(err).message),
+    );
+    return () => {
+      current = false;
+    };
+  }, [clientId, choice.kind, custom?.start, custom?.end]);
+
+  const period = candidates?.period;
+  const toggle = (id: number) => {
+    const next = new Set(unticked);
+    if (!next.delete(id)) next.add(id);
+    setUnticked(next);
+  };
+
+  async function create() {
+    if (!period || !candidates) return;
+    setBusy(true);
+    try {
+      const entryIds = candidates.entries.map((e) => e.id).filter((id) => !unticked.has(id));
+      const invoice = await createDraft({ clientId, start: period.start, end: period.end, entryIds });
+      onCreated(invoice.id);
+    } catch (err) {
+      setError(toCoreError(err).message);
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Modal title={`New ${label.invoice}`} onClose={onClose}>
+      {clients?.length === 0 ? (
+        <p className="hint">Add a {label.client} first.</p>
+      ) : (
+        <>
+          <Field id="draft-client" label={label.client} error={null}>
+            <select
+              id="draft-client"
+              value={clientId}
+              onChange={(e) => {
+                setClientId(Number(e.target.value));
+                setChoice({ kind: "default" });
+              }}
+            >
+              {clients?.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.archived ? `${c.name} (${label.archived})` : c.name}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <div className="segmented" role="group" aria-label="Period">
+            {choices.map((c) => (
+              <button key={c.kind} type="button" aria-pressed={choice.kind === c.kind} onClick={() => setChoice({ kind: c.kind })}>
+                {c.title}
+              </button>
+            ))}
+            <button type="button" aria-pressed={!!custom} onClick={() => period && !custom && setChoice({ kind: "custom", ...period })}>
+              Custom
+            </button>
+          </div>
+          {custom ? (
+            <div className="pair">
+              <Field id="draft-start" label="Start" error={null}>
+                <input id="draft-start" type="date" value={custom.start} onChange={(e) => setChoice({ ...custom, start: e.target.value })} />
+              </Field>
+              <Field id="draft-end" label="End" error={null}>
+                <input id="draft-end" type="date" value={custom.end} onChange={(e) => setChoice({ ...custom, end: e.target.value })} />
+              </Field>
+            </div>
+          ) : (
+            period && <p>{formatRange(period.start, period.end)}</p>
+          )}
+          {candidates && candidates.older > 0 && candidates.olderSince && period && (
+            <p className="hint">
+              <button type="button" className="link" onClick={() => setChoice({ kind: "custom", start: candidates.olderSince!, end: period.end })}>
+                {candidates.older} older uninvoiced {candidates.older === 1 ? "entry" : "entries"} — include?
+              </button>
+            </p>
+          )}
+          {candidates?.entries.length === 0 && <p className="hint">No uninvoiced time in this period.</p>}
+          <ul className="rows">
+            {candidates?.entries.map((e) => (
+              <li key={e.id} className="row">
+                <label>
+                  <input type="checkbox" checked={!unticked.has(e.id)} onChange={() => toggle(e.id)} /> {entryLabel(e)}
+                </label>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+      {error && <p className="error">{error}</p>}
+      <div className="actions">
+        <button type="button" className="ghost" onClick={onClose}>
+          Cancel
+        </button>
+        <button type="button" className="primary" disabled={busy || !candidates} onClick={create}>
+          Create
+        </button>
+      </div>
+    </Modal>
+  );
+}

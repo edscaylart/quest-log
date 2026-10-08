@@ -2,7 +2,8 @@ import { useEffect, useReducer, useState } from "react";
 import { Client } from "@/pages/Client";
 import { Clients } from "@/pages/Clients";
 import { Home } from "./Home";
-import { InvoiceDetail, Invoices } from "./Invoices";
+import { Invoice } from "@/pages/Invoice";
+import { Invoices } from "@/pages/Invoices";
 import { SettingsScreen } from "./Settings";
 import { LevelUp } from "@/components/progress/LevelUp";
 import { TimeEntryModal } from "@/components/time-entries/TimeEntryModal";
@@ -132,7 +133,7 @@ export default function App() {
             }}
           />
         ) : top?.kind === "invoice" ? (
-          <InvoiceDetail
+          <Invoice
             key={top.id}
             id={top.id}
             version={version}
