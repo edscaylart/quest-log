@@ -8,7 +8,7 @@ use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
 use tauri::tray::{TrayIcon, TrayIconBuilder};
 use tauri::{AppHandle, Emitter, Manager, Wry};
 
-use crate::core::time_entries::last_used_client;
+use crate::core::time_entries::{last_used, LastUsed};
 use crate::core::timer::{self, Stopped, Timer, TimerStart};
 use crate::core::{Clock, CoreError, Db, SystemClock};
 
@@ -108,14 +108,17 @@ fn menu(app: &AppHandle, v: &View) -> tauri::Result<Menu<Wry>> {
 async fn act(app: &AppHandle, id: &str) -> Result<(), CoreError> {
     let db = app.state::<Db>();
     match id {
-        // ponytail: no projects yet; Start uses the last-used client only.
-        "start" => match last_used_client(&db).await? {
-            Some(client_id) => {
+        "start" => match last_used(&db).await? {
+            Some(LastUsed {
+                client_id,
+                project_id,
+            }) => {
                 let outcome = timer::start_timer(
                     &db,
                     &SystemClock,
                     TimerStart {
                         client_id,
+                        project_id,
                         note: None,
                     },
                 )
@@ -185,7 +188,7 @@ const STILL_WORKING_MS: i64 = 12 * 3600 * 1000;
 struct View {
     /// `H:MM` while running; `None` shows the idle icon.
     title: Option<String>,
-    /// The running Timer's client.
+    /// The running Timer's client, and project if any.
     client: Option<String>,
     still_working: bool,
 }
@@ -202,7 +205,10 @@ fn view(timer: Option<&Timer>, now_ms: i64) -> View {
     let minutes = elapsed / 60_000;
     View {
         title: Some(format!("{}:{:02}", minutes / 60, minutes % 60)),
-        client: Some(t.client_name.clone()),
+        client: Some(match &t.project_name {
+            Some(project) => format!("{} · {project}", t.client_name),
+            None => t.client_name.clone(),
+        }),
         still_working: elapsed >= STILL_WORKING_MS,
     }
 }
@@ -215,6 +221,8 @@ mod tests {
         Timer {
             client_id: 1,
             client_name: "Acme".into(),
+            project_id: None,
+            project_name: None,
             started_at,
             note: None,
         }
@@ -247,6 +255,13 @@ mod tests {
             "clock behind start"
         );
         assert_eq!(view(Some(&t), 0).client.as_deref(), Some("Acme"));
+    }
+
+    #[test]
+    fn running_shows_the_project_beside_the_client() {
+        let mut t = timer(0);
+        t.project_name = Some("Website".into());
+        assert_eq!(view(Some(&t), 0).client.as_deref(), Some("Acme · Website"));
     }
 
     #[test]

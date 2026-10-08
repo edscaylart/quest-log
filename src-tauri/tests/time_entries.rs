@@ -3,7 +3,7 @@ mod common;
 use common::Fixture;
 use quest_log_lib::core::clients::{create_client, Client, NewClient};
 use quest_log_lib::core::time_entries::{
-    create_entry, delete_entry, last_used_client, list_entries, update_entry, EntryInput, Span,
+    create_entry, delete_entry, last_used, list_entries, update_entry, EntryInput, Span,
 };
 use quest_log_lib::core::CoreError;
 
@@ -18,6 +18,7 @@ async fn client(f: &Fixture, name: &str) -> Client {
 fn by_duration(client_id: i64, date: &str, duration: &str) -> EntryInput {
     EntryInput {
         client_id,
+        project_id: None,
         date: date.into(),
         span: Span::Duration {
             duration: duration.into(),
@@ -49,6 +50,7 @@ async fn entry_by_duration_is_listed() {
 fn by_range(client_id: i64, date: &str, start: &str, end: &str) -> EntryInput {
     EntryInput {
         client_id,
+        project_id: None,
         date: date.into(),
         span: Span::Range {
             start: start.into(),
@@ -294,9 +296,9 @@ async fn list_is_newest_day_first_and_filters_by_client() {
 }
 
 #[tokio::test]
-async fn last_used_client_is_the_one_most_recently_logged() {
+async fn last_used_is_the_one_most_recently_logged() {
     let f = Fixture::new().await;
-    assert_eq!(last_used_client(&f.db).await.unwrap(), None);
+    assert_eq!(last_used(&f.db).await.unwrap(), None);
     let acme = client(&f, "Acme").await;
     let bolt = client(&f, "Bolt").await;
 
@@ -307,7 +309,10 @@ async fn last_used_client_is_the_one_most_recently_logged() {
         .await
         .unwrap();
 
-    assert_eq!(last_used_client(&f.db).await.unwrap(), Some(acme.id));
+    assert_eq!(
+        last_used(&f.db).await.unwrap().map(|u| u.client_id),
+        Some(acme.id)
+    );
 }
 
 fn utc(y: i32, mo: u32, d: u32, h: u32, mi: u32) -> i64 {

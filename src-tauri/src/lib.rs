@@ -3,8 +3,9 @@ mod tray;
 
 use tauri::{Manager, State};
 
-use crate::core::clients::{self, Client, NewClient};
-use crate::core::time_entries::{self, EntryInput, TimeEntry};
+use crate::core::clients::{self, Client, ClientEdit, NewClient, Repricing};
+use crate::core::projects::{self, Project, ProjectInput};
+use crate::core::time_entries::{self, EntryInput, LastUsed, TimeEntry};
 use crate::core::timer::{self, Stopped, Timer, TimerEdit, TimerStart};
 use crate::core::{CoreError, Db, SystemClock};
 
@@ -18,6 +19,76 @@ async fn create_client(db: State<'_, Db>, input: NewClient) -> Result<Client, Co
 #[tauri::command]
 async fn list_clients(db: State<'_, Db>) -> Result<Vec<Client>, CoreError> {
     clients::list_clients(&db).await
+}
+
+#[tauri::command]
+async fn get_client(db: State<'_, Db>, id: i64) -> Result<Client, CoreError> {
+    clients::get_client(&db, id).await
+}
+
+#[tauri::command]
+async fn update_client(db: State<'_, Db>, id: i64, input: ClientEdit) -> Result<Client, CoreError> {
+    clients::update_client(&db, id, input).await
+}
+
+#[tauri::command]
+async fn preview_client_rate(
+    db: State<'_, Db>,
+    id: i64,
+    rate: String,
+) -> Result<Repricing, CoreError> {
+    clients::preview_client_rate(&db, id, &rate).await
+}
+
+#[tauri::command]
+async fn create_project(
+    db: State<'_, Db>,
+    client_id: i64,
+    input: ProjectInput,
+) -> Result<Project, CoreError> {
+    projects::create_project(&db, &SystemClock, client_id, input).await
+}
+
+#[tauri::command]
+async fn update_project(
+    db: State<'_, Db>,
+    id: i64,
+    input: ProjectInput,
+) -> Result<Project, CoreError> {
+    projects::update_project(&db, id, input).await
+}
+
+#[tauri::command]
+async fn set_project_complete(
+    db: State<'_, Db>,
+    id: i64,
+    complete: bool,
+) -> Result<Project, CoreError> {
+    projects::set_project_complete(&db, id, complete).await
+}
+
+#[tauri::command]
+async fn delete_project(db: State<'_, Db>, id: i64) -> Result<(), CoreError> {
+    projects::delete_project(&db, id).await
+}
+
+#[tauri::command]
+async fn list_projects(db: State<'_, Db>, client_id: i64) -> Result<Vec<Project>, CoreError> {
+    projects::list_projects(&db, client_id).await
+}
+
+#[tauri::command]
+async fn get_project(db: State<'_, Db>, id: i64) -> Result<Project, CoreError> {
+    projects::get_project(&db, id).await
+}
+
+#[tauri::command]
+async fn preview_project_rate(
+    db: State<'_, Db>,
+    id: i64,
+    rate: String,
+) -> Result<Repricing, CoreError> {
+    projects::preview_project_rate(&db, id, &rate).await
 }
 
 #[tauri::command]
@@ -48,8 +119,8 @@ async fn list_time_entries(
 }
 
 #[tauri::command]
-async fn last_used_client(db: State<'_, Db>) -> Result<Option<i64>, CoreError> {
-    time_entries::last_used_client(&db).await
+async fn last_used(db: State<'_, Db>) -> Result<Option<LastUsed>, CoreError> {
+    time_entries::last_used(&db).await
 }
 
 #[tauri::command]
@@ -103,11 +174,21 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             create_client,
             list_clients,
+            get_client,
+            update_client,
+            preview_client_rate,
+            create_project,
+            update_project,
+            set_project_complete,
+            delete_project,
+            list_projects,
+            get_project,
+            preview_project_rate,
             create_time_entry,
             update_time_entry,
             delete_time_entry,
             list_time_entries,
-            last_used_client,
+            last_used,
             get_timer,
             start_timer,
             stop_timer,

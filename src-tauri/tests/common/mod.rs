@@ -18,6 +18,11 @@ impl FakeClock {
         *self.0.lock().unwrap() = now;
     }
 
+    #[allow(dead_code)]
+    pub fn now_plus_minutes(&self, minutes: i64) -> DateTime<Utc> {
+        self.now() + chrono::Duration::minutes(minutes)
+    }
+
     fn zone() -> FixedOffset {
         FixedOffset::west_opt(3 * 3600).unwrap()
     }

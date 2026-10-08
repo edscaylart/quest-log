@@ -22,6 +22,7 @@ async fn client(f: &Fixture, name: &str) -> Client {
 fn start(client_id: i64) -> TimerStart {
     TimerStart {
         client_id,
+        project_id: None,
         note: None,
     }
 }
@@ -159,6 +160,7 @@ async fn over_24_hours_needs_an_edit_and_keeps_the_timer() {
     // The editor saves only at 24 hours or less.
     let fixed = |duration: &str| EntryInput {
         client_id: acme.id,
+        project_id: None,
         date: overlong.date.clone(),
         span: Span::Duration {
             duration: duration.into(),
@@ -213,6 +215,7 @@ async fn patron_note_and_an_earlier_start_can_be_edited_while_running() {
         &f.clock,
         TimerEdit {
             client_id: bolt.id,
+            project_id: None,
             note: Some("Review".into()),
             start: Some("2026-10-07T08:15".into()),
         },
@@ -232,6 +235,7 @@ async fn patron_note_and_an_earlier_start_can_be_edited_while_running() {
         &f.clock,
         TimerEdit {
             client_id: bolt.id,
+            project_id: None,
             note: None,
             start: None,
         },
@@ -258,6 +262,7 @@ async fn moving_the_start_later_is_rejected() {
         &f.clock,
         TimerEdit {
             client_id: acme.id,
+            project_id: None,
             note: None,
             start: Some("2026-10-07T09:01".into()),
         },

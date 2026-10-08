@@ -4,20 +4,21 @@ import App from "./App";
 import type { Client, EntryInput, TimeEntry } from "./api";
 import { renderWithIpc } from "./test/render";
 
-const acme: Client = { id: 1, name: "Acme", rateCents: 8500 };
-const bolt: Client = { id: 2, name: "Bolt", rateCents: 12000 };
+const acme: Client = { id: 1, name: "Acme", rateCents: 8500, billingName: null, address: null, email: null, netDays: null };
+const bolt: Client = { id: 2, name: "Bolt", rateCents: 12000, billingName: null, address: null, email: null, netDays: null };
 
 const unix = (...local: [number, number, number, number, number]) => new Date(...local).getTime() / 1000;
 
 function entry(fields: Partial<TimeEntry> & Pick<TimeEntry, "id" | "date" | "seconds">): TimeEntry {
-  return { clientId: 1, clientName: "Acme", startedAt: null, endedAt: null, note: null, ...fields };
+  return { clientId: 1, clientName: "Acme", projectId: null, projectName: null, rateCents: 8500, startedAt: null, endedAt: null, note: null, ...fields };
 }
 
 function fakeCore(entries: TimeEntry[] = [], lastUsed: number | null = null) {
   return {
     list_clients: () => [acme, bolt],
-    last_used_client: () => lastUsed,
+    last_used: () => (lastUsed ? { clientId: lastUsed, projectId: null } : null),
     get_timer: () => null,
+    list_projects: () => [],
     list_time_entries: ({ clientId }: Record<string, unknown>) =>
       entries.filter((e) => clientId == null || e.clientId === clientId),
     create_time_entry: ({ input }: Record<string, unknown>) => {
@@ -91,7 +92,7 @@ describe("Log", () => {
 
     expect(calls).toContainEqual({
       cmd: "create_time_entry",
-      args: { input: { clientId: 2, date: "2026-10-07", span: { mode: "duration", duration: "1:30" }, note: "Kickoff" } },
+      args: { input: { clientId: 2, projectId: null, date: "2026-10-07", span: { mode: "duration", duration: "1:30" }, note: "Kickoff" } },
     });
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(await screen.findByRole("listitem")).toHaveTextContent("Kickoff");
@@ -109,7 +110,7 @@ describe("Log", () => {
 
     expect(calls).toContainEqual({
       cmd: "create_time_entry",
-      args: { input: { clientId: 1, date: "2026-10-07", span: { mode: "range", start: "09:15", end: "17:45" }, note: "" } },
+      args: { input: { clientId: 1, projectId: null, date: "2026-10-07", span: { mode: "range", start: "09:15", end: "17:45" }, note: "" } },
     });
   });
 
@@ -145,7 +146,7 @@ describe("Log", () => {
 
     expect(calls).toContainEqual({
       cmd: "update_time_entry",
-      args: { id: 7, input: { clientId: 1, date: "2026-10-06", span: { mode: "range", start: "09:15", end: "10:15" }, note: "Call" } },
+      args: { id: 7, input: { clientId: 1, projectId: null, date: "2026-10-06", span: { mode: "range", start: "09:15", end: "10:15" }, note: "Call" } },
     });
   });
 

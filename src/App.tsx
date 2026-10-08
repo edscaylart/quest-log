@@ -2,8 +2,10 @@ import { listen } from "@tauri-apps/api/event";
 import { useEffect, useReducer, useState } from "react";
 import { getTimer, startTimer, toCoreError, type Overlong, type Stopped, type Timer } from "./api";
 import { label } from "./labels";
-import { Clients } from "./Clients";
+import { ClientDetail, Clients } from "./Clients";
 import { EntryModal, Log } from "./Log";
+import { Nav, type Screen } from "./nav";
+import { ProjectDetail } from "./Projects";
 import { Hud } from "./Timer";
 
 // 8×8 pixel icons, one string of unit squares each.
@@ -25,6 +27,12 @@ type Tab = (typeof tabs)[number]["id"];
 
 export default function App() {
   const [tab, setTab] = useState<Tab>("home");
+  // Each tab's own push stack; switching tabs leaves them as they are.
+  const [stacks, setStacks] = useState<Record<Tab, Screen[]>>({ home: [], log: [], clients: [], invoices: [] });
+  const stack = stacks[tab];
+  const top = stack.at(-1);
+  const setStack = (next: Screen[]) => setStacks({ ...stacks, [tab]: next });
+  const back = () => setStack(stack.slice(0, -1));
   const [newEntry, setNewEntry] = useState(false);
   // Bumped when clients, entries or the Timer change, so every screen reloads.
   const [version, changed] = useReducer((n: number) => n + 1, 0);
@@ -73,18 +81,38 @@ export default function App() {
     <div className="app">
       <Hud timer={timer} version={version} error={timerError} onStopped={stopped} onChange={() => stopped(null)} onError={failed} />
       <main>
-        {tab === "clients" ? (
-          <Clients onChange={changed} />
+        <Nav.Provider value={{ push: (screen) => setStack([...stack, screen]) }}>
+        {top && (
+          <button className="ghost back" onClick={back}>
+            ◀ Back
+          </button>
+        )}
+        {top?.kind === "client" ? (
+          <ClientDetail key={top.id} id={top.id} version={version} onChange={changed} />
+        ) : top?.kind === "project" ? (
+          <ProjectDetail
+            key={top.id}
+            id={top.id}
+            version={version}
+            onChange={changed}
+            onDeleted={() => {
+              back();
+              changed();
+            }}
+          />
+        ) : tab === "clients" ? (
+          <Clients version={version} onChange={changed} />
         ) : tab === "log" ? (
           <Log
             creating={newEntry}
             setCreating={setNewEntry}
             version={version}
-            onResume={(e) => startTimer({ clientId: e.clientId, note: e.note }).then(stopped, failed)}
+            onResume={(e) => startTimer({ clientId: e.clientId, projectId: e.projectId, note: e.note }).then(stopped, failed)}
           />
         ) : (
           <Placeholder title={tabs.find((t) => t.id === tab)!.title} />
         )}
+        </Nav.Provider>
       </main>
       <nav className="tabbar" role="tablist">
         {tabs.map((t) => (

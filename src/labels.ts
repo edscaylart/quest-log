@@ -5,4 +5,8 @@ export const label = {
   rate: "Gold/hr",
   allClients: "All Patrons",
   invoices: "Scrolls",
+  project: "Quest",
+  projects: "Quests",
+  noProject: "No Quest",
+  complete: "Quest complete",
 } as const;

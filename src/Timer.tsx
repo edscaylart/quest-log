@@ -2,7 +2,7 @@ import { listen } from "@tauri-apps/api/event";
 import { useEffect, useState, type FormEvent } from "react";
 import {
   discardTimer,
-  lastUsedClient,
+  lastUsed,
   listClients,
   startTimer,
   stopTimer,
@@ -13,9 +13,9 @@ import {
   type Stopped,
   type Timer,
 } from "./api";
-import { formatClock, localDate, localTime } from "./format";
+import { clientAndProject, formatClock, localDate, localTime } from "./format";
 import { label } from "./labels";
-import { Field, Modal } from "./Modal";
+import { Field, Modal, ProjectField } from "./Modal";
 
 const STILL_WORKING_SECONDS = 12 * 3600;
 
@@ -125,11 +125,11 @@ function Running({ timer, onEdit, onStop, onDiscard }: { timer: Timer; onEdit: (
   const elapsed = useElapsed(timer.startedAt);
   return (
     <div className="timer">
-      <button className="ghost" aria-label={`Edit Timer, ${timer.clientName}`} onClick={onEdit}>
+      <button className="ghost" aria-label={`Edit Timer, ${clientAndProject(timer)}`} onClick={onEdit}>
         <span role="timer" className="num">
           {formatClock(elapsed)}
         </span>
-        <span className="who">{timer.clientName}</span>
+        <span className="who">{clientAndProject(timer)}</span>
       </button>
       <button className="primary" onClick={onStop}>
         Stop
@@ -145,21 +145,27 @@ function Running({ timer, onEdit, onStop, onDiscard }: { timer: Timer; onEdit: (
 
 function StartModal({ clients, onClose, onStarted }: { clients: Client[]; onClose: () => void; onStarted: (outcome: Stopped | null) => void }) {
   const [clientId, setClientId] = useState(clients[0]?.id ?? 0);
+  const [projectId, setProjectId] = useState<number | null>(null);
   const [error, setError] = useState<CoreError | null>(null);
 
   useEffect(() => {
-    lastUsedClient().then((last) => clients.some((c) => c.id === last) && setClientId(last!));
+    lastUsed().then((last) => {
+      if (!last || !clients.some((c) => c.id === last.clientId)) return;
+      setClientId(last.clientId);
+      setProjectId(last.projectId);
+    });
   }, []);
 
   function submit(e: FormEvent) {
     e.preventDefault();
-    startTimer({ clientId, note: null }).then(onStarted, (err) => setError(toCoreError(err)));
+    startTimer({ clientId, projectId, note: null }).then(onStarted, (err) => setError(toCoreError(err)));
   }
 
   return (
     <Modal title="Start Timer" onClose={onClose}>
       <form onSubmit={submit} noValidate>
-        <ClientField clients={clients} clientId={clientId} setClientId={setClientId} error={error} />
+        <ClientField clients={clients} clientId={clientId} setClientId={setClientId} setProjectId={setProjectId} error={error} />
+        <ProjectField id="timer-project" clientId={clientId} projectId={projectId} setProjectId={setProjectId} error={error} />
         {error && error.kind !== "invalid" && <p className="error">{error.message}</p>}
         <div className="actions">
           <button type="button" className="ghost" onClick={onClose}>
@@ -180,6 +186,7 @@ const localDateTime = (ms: number) => `${localDate(new Date(ms))}T${localTime(ms
 function EditModal({ timer, clients, onClose, onSaved }: { timer: Timer; clients: Client[]; onClose: () => void; onSaved: () => void }) {
   const initialStart = localDateTime(timer.startedAt);
   const [clientId, setClientId] = useState(timer.clientId);
+  const [projectId, setProjectId] = useState(timer.projectId);
   const [note, setNote] = useState(timer.note ?? "");
   const [start, setStart] = useState(initialStart);
   const [error, setError] = useState<CoreError | null>(null);
@@ -188,13 +195,21 @@ function EditModal({ timer, clients, onClose, onSaved }: { timer: Timer; clients
   function submit(e: FormEvent) {
     e.preventDefault();
     // Unchanged start is sent as null so the core keeps its seconds.
-    updateTimer({ clientId, note, start: start === initialStart ? null : start }).then(onSaved, (err) => setError(toCoreError(err)));
+    updateTimer({ clientId, projectId, note, start: start === initialStart ? null : start }).then(onSaved, (err) => setError(toCoreError(err)));
   }
 
   return (
     <Modal title="Edit Timer" onClose={onClose}>
       <form onSubmit={submit} noValidate>
-        <ClientField clients={clients} clientId={clientId} setClientId={setClientId} error={error} />
+        <ClientField clients={clients} clientId={clientId} setClientId={setClientId} setProjectId={setProjectId} error={error} />
+        <ProjectField
+          id="timer-project"
+          clientId={clientId}
+          projectId={projectId}
+          setProjectId={setProjectId}
+          keep={timer.projectId}
+          error={error}
+        />
         <Field id="timer-start" label="Start" error={fieldError("start")}>
           <input id="timer-start" type="datetime-local" value={start} onChange={(e) => setStart(e.target.value)} aria-invalid={!!fieldError("start")} />
         </Field>
@@ -219,17 +234,26 @@ function ClientField({
   clients,
   clientId,
   setClientId,
+  setProjectId,
   error,
 }: {
   clients: Client[];
   clientId: number;
   setClientId: (id: number) => void;
+  /** Reset when the client changes: a project belongs to one client. */
+  setProjectId: (id: number | null) => void;
   error: CoreError | null;
 }) {
   const message = error?.kind === "invalid" && error.field === "client" ? error.message : null;
   return (
     <Field id="timer-client" label={label.client} error={message}>
-      <select id="timer-client" value={clientId} onChange={(e) => setClientId(Number(e.target.value))} aria-invalid={!!message}>
+      <select id="timer-client" value={clientId} 
+        onChange={(e) => {
+          setClientId(Number(e.target.value));
+          setProjectId(null);
+        }}
+        aria-invalid={!!message}
+      >
         {clients.map((c) => (
           <option key={c.id} value={c.id}>
             {c.name}

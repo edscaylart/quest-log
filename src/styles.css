@@ -369,3 +369,49 @@ input::placeholder {
   white-space: nowrap;
   text-overflow: ellipsis;
 }
+
+/* Detail screens */
+
+.back {
+  margin-bottom: var(--gap);
+}
+
+.details {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 4px var(--gap);
+  margin: 0 0 var(--gap);
+}
+
+.details dt {
+  font-weight: 500;
+  color: var(--dark);
+}
+
+.details dd {
+  margin: 0;
+}
+
+.multiline {
+  white-space: pre-line;
+}
+
+.toolbar .segmented {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+textarea {
+  padding: 6px 8px;
+  border: var(--border);
+  border-radius: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  outline: none;
+  resize: vertical;
+}
+
+textarea:focus {
+  background: var(--light);
+}

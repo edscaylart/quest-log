@@ -11,7 +11,7 @@ function fakeCore(clients: Client[] = []) {
     get_timer: () => null,
     create_client: ({ input }: Record<string, unknown>) => {
       const { name, rate } = input as { name: string; rate: string };
-      const client = { id: clients.length + 1, name, rateCents: Math.round(Number(rate) * 100) };
+      const client = { id: clients.length + 1, name, rateCents: Math.round(Number(rate) * 100), billingName: null, address: null, email: null, netDays: null };
       clients = [...clients, client];
       return client;
     },
@@ -38,7 +38,7 @@ describe("navigation", () => {
 
 describe("Clients", () => {
   it("lists Patrons with their Gold/hr", async () => {
-    const { user } = renderWithIpc(<App />, fakeCore([{ id: 1, name: "Acme", rateCents: 8550 }]));
+    const { user } = renderWithIpc(<App />, fakeCore([{ id: 1, name: "Acme", rateCents: 8550, billingName: null, address: null, email: null, netDays: null }]));
 
     await user.click(screen.getByRole("tab", { name: "Patrons" }));
 

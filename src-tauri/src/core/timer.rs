@@ -5,7 +5,8 @@ use chrono::{DateTime, NaiveDateTime};
 use serde::{Deserialize, Serialize};
 
 use super::time_entries::{
-    clean_note, get_entry, insert, invalid, require_client, validate, EntryInput, TimeEntry, Valid,
+    clean_note, get_entry, insert, invalid, require_client, require_project, validate, EntryInput,
+    TimeEntry, Valid,
 };
 use super::{Clock, CoreError, Db, Result};
 
@@ -14,6 +15,8 @@ use super::{Clock, CoreError, Db, Result};
 pub struct Timer {
     pub client_id: i64,
     pub client_name: String,
+    pub project_id: Option<i64>,
+    pub project_name: Option<String>,
     /// Unix milliseconds.
     pub started_at: i64,
     pub note: Option<String>,
@@ -23,6 +26,7 @@ pub struct Timer {
 #[serde(rename_all = "camelCase")]
 pub struct TimerStart {
     pub client_id: i64,
+    pub project_id: Option<i64>,
     pub note: Option<String>,
 }
 
@@ -31,6 +35,7 @@ pub struct TimerStart {
 #[serde(rename_all = "camelCase")]
 pub struct TimerEdit {
     pub client_id: i64,
+    pub project_id: Option<i64>,
     pub note: Option<String>,
     /// Local "YYYY-MM-DDTHH:MM"; `None` keeps the start as is.
     pub start: Option<String>,
@@ -55,6 +60,7 @@ pub enum Stopped {
 #[serde(rename_all = "camelCase")]
 pub struct Overlong {
     pub client_id: i64,
+    pub project_id: Option<i64>,
     pub date: String,
     pub seconds: i64,
     pub note: Option<String>,
@@ -62,8 +68,9 @@ pub struct Overlong {
 
 pub async fn get_timer(db: &Db) -> Result<Option<Timer>> {
     Ok(sqlx::query_as(
-        "SELECT t.client_id, c.name AS client_name, t.started_at, t.note \
-         FROM timer t JOIN clients c ON c.id = t.client_id",
+        "SELECT t.client_id, c.name AS client_name, t.project_id, p.name AS project_name, \
+         t.started_at, t.note FROM timer t JOIN clients c ON c.id = t.client_id \
+         LEFT JOIN projects p ON p.id = t.project_id",
     )
     .fetch_optional(db)
     .await?)
@@ -73,6 +80,7 @@ pub async fn get_timer(db: &Db) -> Result<Option<Timer>> {
 /// returned; if it needs editing, the new Timer does not start.
 pub async fn start_timer(db: &Db, clock: &dyn Clock, input: TimerStart) -> Result<Option<Stopped>> {
     require_client(db, input.client_id).await?;
+    require_project(db, input.client_id, input.project_id, None).await?;
     let previous = match get_timer(db).await? {
         Some(_) => Some(stop_timer(db, clock).await?),
         None => None,
@@ -80,12 +88,15 @@ pub async fn start_timer(db: &Db, clock: &dyn Clock, input: TimerStart) -> Resul
     if let Some(Stopped::NeedsEdit { .. }) = previous {
         return Ok(previous);
     }
-    sqlx::query("INSERT INTO timer (id, client_id, started_at, note) VALUES (1, ?, ?, ?)")
-        .bind(input.client_id)
-        .bind(clock.now().timestamp_millis())
-        .bind(input.note.as_deref().and_then(clean_note))
-        .execute(db)
-        .await?;
+    sqlx::query(
+        "INSERT INTO timer (id, client_id, project_id, started_at, note) VALUES (1, ?, ?, ?, ?)",
+    )
+    .bind(input.client_id)
+    .bind(input.project_id)
+    .bind(clock.now().timestamp_millis())
+    .bind(input.note.as_deref().and_then(clean_note))
+    .execute(db)
+    .await?;
     Ok(previous)
 }
 
@@ -102,6 +113,7 @@ pub async fn stop_timer(db: &Db, clock: &dyn Clock) -> Result<Stopped> {
         return Ok(Stopped::NeedsEdit {
             overlong: Overlong {
                 client_id: timer.client_id,
+                project_id: timer.project_id,
                 date: date.to_string(),
                 seconds,
                 note: timer.note,
@@ -111,6 +123,7 @@ pub async fn stop_timer(db: &Db, clock: &dyn Clock) -> Result<Stopped> {
 
     let started_at = start.timestamp();
     let valid = Valid {
+        project_id: timer.project_id,
         date,
         seconds,
         started_at: Some(started_at),
@@ -122,10 +135,11 @@ pub async fn stop_timer(db: &Db, clock: &dyn Clock) -> Result<Stopped> {
     })
 }
 
-/// Changes the client and note; the start may only move earlier.
+/// Changes the client, project and note; the start may only move earlier.
 pub async fn update_timer(db: &Db, clock: &dyn Clock, input: TimerEdit) -> Result<Timer> {
     let timer = get_timer(db).await?.ok_or_else(not_running)?;
     require_client(db, input.client_id).await?;
+    require_project(db, input.client_id, input.project_id, timer.project_id).await?;
     let started_at = match input.start.as_deref().map(str::trim) {
         None => timer.started_at,
         Some(text) => {
@@ -142,8 +156,9 @@ pub async fn update_timer(db: &Db, clock: &dyn Clock, input: TimerEdit) -> Resul
         }
     };
 
-    sqlx::query("UPDATE timer SET client_id = ?, started_at = ?, note = ?")
+    sqlx::query("UPDATE timer SET client_id = ?, project_id = ?, started_at = ?, note = ?")
         .bind(input.client_id)
+        .bind(input.project_id)
         .bind(started_at)
         .bind(input.note.as_deref().and_then(clean_note))
         .execute(db)
@@ -154,8 +169,8 @@ pub async fn update_timer(db: &Db, clock: &dyn Clock, input: TimerEdit) -> Resul
 /// Saves the editor's fixed version of a Timer that [`Stopped::NeedsEdit`],
 /// under the usual entry rules, and clears the Timer.
 pub async fn finish_timer(db: &Db, clock: &dyn Clock, input: EntryInput) -> Result<TimeEntry> {
-    get_timer(db).await?.ok_or_else(not_running)?;
-    let v = validate(db, clock, &input).await?;
+    let timer = get_timer(db).await?.ok_or_else(not_running)?;
+    let v = validate(db, clock, &input, timer.project_id).await?;
     save_and_clear(db, clock, input.client_id, v).await
 }
 

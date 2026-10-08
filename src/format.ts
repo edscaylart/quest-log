@@ -24,3 +24,10 @@ export function localTime(unix: number) {
 
 /** 3723 → "1:02:03". The running Timer. */
 export const formatClock = (seconds: number) => `${formatSeconds(seconds)}:${pad(seconds % 60)}`;
+
+/** 45000 → "12.5". Decimal hours, up to 2dp, for totals that go with money. */
+export const formatHours = (seconds: number) => String(Number((seconds / 3600).toFixed(2)));
+
+/** "Acme · Website", or just "Acme". */
+export const clientAndProject = (x: { clientName: string; projectName: string | null }) =>
+  x.projectName ? `${x.clientName} · ${x.projectName}` : x.clientName;

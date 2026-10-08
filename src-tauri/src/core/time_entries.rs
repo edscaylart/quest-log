@@ -9,6 +9,8 @@ use super::{Clock, CoreError, Db, Result};
 #[serde(rename_all = "camelCase")]
 pub struct EntryInput {
     pub client_id: i64,
+    /// Must be one of the client's projects.
+    pub project_id: Option<i64>,
     /// Local calendar day, YYYY-MM-DD.
     pub date: String,
     pub span: Span,
@@ -30,6 +32,10 @@ pub struct TimeEntry {
     pub id: i64,
     pub client_id: i64,
     pub client_name: String,
+    pub project_id: Option<i64>,
+    pub project_name: Option<String>,
+    /// The live rate: the project's if set, else the client's.
+    pub rate_cents: i64,
     pub date: String,
     pub seconds: i64,
     /// Unix seconds; set only for entries logged by start–end.
@@ -39,7 +45,7 @@ pub struct TimeEntry {
 }
 
 pub async fn create_entry(db: &Db, clock: &dyn Clock, input: EntryInput) -> Result<TimeEntry> {
-    let v = validate(db, clock, &input).await?;
+    let v = validate(db, clock, &input, None).await?;
     let id = insert(&mut *db.acquire().await?, clock, input.client_id, v).await?;
     get_entry(db, id).await
 }
@@ -53,10 +59,11 @@ pub(super) async fn insert(
     v: Valid<'_>,
 ) -> Result<i64> {
     Ok(sqlx::query(
-        "INSERT INTO time_entries (client_id, date, seconds, started_at, ended_at, note, created_at) \
-         VALUES (?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO time_entries (client_id, project_id, date, seconds, started_at, ended_at, note, created_at) \
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
     )
     .bind(client_id)
+    .bind(v.project_id)
     .bind(v.date.to_string())
     .bind(v.seconds)
     .bind(v.started_at)
@@ -75,13 +82,15 @@ pub async fn update_entry(
     id: i64,
     input: EntryInput,
 ) -> Result<TimeEntry> {
-    let v = validate(db, clock, &input).await?;
+    let current = get_entry(db, id).await?;
+    let v = validate(db, clock, &input, current.project_id).await?;
 
     let updated = sqlx::query(
-        "UPDATE time_entries SET client_id = ?, date = ?, seconds = ?, started_at = ?, ended_at = ?, note = ? \
+        "UPDATE time_entries SET client_id = ?, project_id = ?, date = ?, seconds = ?, started_at = ?, ended_at = ?, note = ? \
          WHERE id = ?",
     )
     .bind(input.client_id)
+    .bind(v.project_id)
     .bind(v.date.to_string())
     .bind(v.seconds)
     .bind(v.started_at)
@@ -111,14 +120,23 @@ pub async fn delete_entry(db: &Db, id: i64) -> Result<()> {
     Ok(())
 }
 
-/// The client of the most recently logged entry, to pre-fill the next one.
+/// The client and project of the most recently logged entry, to pre-fill the next one.
+#[derive(Debug, PartialEq, Serialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct LastUsed {
+    pub client_id: i64,
+    /// `None` if the entry had no project or it is complete now.
+    pub project_id: Option<i64>,
+}
+
 // ponytail: derived from entries; becomes a stored setting if the Timer needs it to differ.
-pub async fn last_used_client(db: &Db) -> Result<Option<i64>> {
-    Ok(
-        sqlx::query_scalar("SELECT client_id FROM time_entries ORDER BY id DESC LIMIT 1")
-            .fetch_optional(db)
-            .await?,
+pub async fn last_used(db: &Db) -> Result<Option<LastUsed>> {
+    Ok(sqlx::query_as(
+        "SELECT e.client_id, CASE WHEN p.complete THEN NULL ELSE e.project_id END AS project_id \
+         FROM time_entries e LEFT JOIN projects p ON p.id = e.project_id ORDER BY e.id DESC LIMIT 1",
     )
+    .fetch_optional(db)
+    .await?)
 }
 
 pub async fn list_entries(db: &Db, client_id: Option<i64>) -> Result<Vec<TimeEntry>> {
@@ -130,8 +148,10 @@ pub async fn list_entries(db: &Db, client_id: Option<i64>) -> Result<Vec<TimeEnt
     .await?)
 }
 
-const SELECT: &str = "SELECT e.id, e.client_id, c.name AS client_name, e.date, e.seconds, \
-    e.started_at, e.ended_at, e.note FROM time_entries e JOIN clients c ON c.id = e.client_id";
+const SELECT: &str = "SELECT e.id, e.client_id, c.name AS client_name, e.project_id, \
+    p.name AS project_name, COALESCE(p.rate_cents, c.rate_cents) AS rate_cents, e.date, e.seconds, \
+    e.started_at, e.ended_at, e.note FROM time_entries e JOIN clients c ON c.id = e.client_id \
+    LEFT JOIN projects p ON p.id = e.project_id";
 
 pub(super) async fn get_entry(db: &Db, id: i64) -> Result<TimeEntry> {
     sqlx::query_as(&format!("{SELECT} WHERE e.id = ?"))
@@ -148,6 +168,7 @@ fn not_found() -> CoreError {
 }
 
 pub(super) struct Valid<'a> {
+    pub project_id: Option<i64>,
     pub date: NaiveDate,
     pub seconds: i64,
     pub started_at: Option<i64>,
@@ -155,12 +176,16 @@ pub(super) struct Valid<'a> {
     pub note: Option<&'a str>,
 }
 
+/// `current_project` is the entry's project before this edit, which it may keep
+/// even if that project is complete by now.
 pub(super) async fn validate<'a>(
     db: &Db,
     clock: &dyn Clock,
     input: &'a EntryInput,
+    current_project: Option<i64>,
 ) -> Result<Valid<'a>> {
     require_client(db, input.client_id).await?;
+    require_project(db, input.client_id, input.project_id, current_project).await?;
 
     let date = NaiveDate::parse_from_str(input.date.trim(), "%Y-%m-%d")
         .map_err(|_| invalid("date", "Date is required"))?;
@@ -192,6 +217,7 @@ pub(super) async fn validate<'a>(
     }
 
     Ok(Valid {
+        project_id: input.project_id,
         date,
         seconds,
         started_at,
@@ -208,6 +234,34 @@ pub(super) async fn require_client(db: &Db, client_id: i64) -> Result<()> {
     client
         .map(|_| ())
         .ok_or_else(|| invalid("client", "Client is required"))
+}
+
+/// No project, or an active one of `client_id` (`current` may stay though complete).
+pub(super) async fn require_project(
+    db: &Db,
+    client_id: i64,
+    project_id: Option<i64>,
+    current: Option<i64>,
+) -> Result<()> {
+    let Some(id) = project_id else {
+        return Ok(());
+    };
+    let found: Option<(i64, bool)> =
+        sqlx::query_as("SELECT client_id, complete FROM projects WHERE id = ?")
+            .bind(id)
+            .fetch_optional(db)
+            .await?;
+    match found {
+        Some((owner, _)) if owner != client_id => Err(invalid(
+            "project",
+            "Project must belong to the entry's client",
+        )),
+        Some((_, true)) if current != Some(id) => {
+            Err(invalid("project", "That project is complete"))
+        }
+        Some(_) => Ok(()),
+        None => Err(invalid("project", "Project not found")),
+    }
 }
 
 fn parse_time(field: &'static str, input: &str) -> Result<NaiveTime> {
