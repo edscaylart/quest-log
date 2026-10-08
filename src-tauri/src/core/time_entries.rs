@@ -24,7 +24,7 @@ pub enum Span {
     Range { start: String, end: String },
 }
 
-#[derive(Debug, Serialize, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, sqlx::FromRow)]
 #[serde(rename_all = "camelCase")]
 pub struct TimeEntry {
     pub id: i64,

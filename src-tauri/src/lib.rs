@@ -1,4 +1,5 @@
 pub mod core;
+mod tray;
 
 use tauri::{Manager, State};
 
@@ -89,7 +90,15 @@ pub fn run() {
             std::fs::create_dir_all(&dir)?;
             let db = tauri::async_runtime::block_on(core::open(&dir.join("quest-log.db")))?;
             app.manage(db);
+            tray::setup(app.handle())?;
             Ok(())
+        })
+        // Closing hides the window; the app and Timer keep running until ⌘Q or tray Quit.
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                api.prevent_close();
+                let _ = window.hide();
+            }
         })
         .invoke_handler(tauri::generate_handler![
             create_client,
@@ -106,6 +115,12 @@ pub fn run() {
             finish_timer,
             discard_timer
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running Quest Log");
+        .build(tauri::generate_context!())
+        .expect("error while building Quest Log")
+        .run(|app, event| {
+            // Dock icon click brings the hidden window back.
+            if let tauri::RunEvent::Reopen { .. } = event {
+                tray::show(app);
+            }
+        });
 }

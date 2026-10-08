@@ -1,3 +1,4 @@
+import { listen } from "@tauri-apps/api/event";
 import { useEffect, useReducer, useState } from "react";
 import { getTimer, startTimer, toCoreError, type Overlong, type Stopped, type Timer } from "./api";
 import { label } from "./labels";
@@ -41,6 +42,15 @@ export default function App() {
     setTimerError(null);
     changed();
   };
+
+  // The tray drives the same core and reports here, so the window stays current.
+  useEffect(() => {
+    const unlisten = [
+      listen<Stopped | null>("timer-changed", (e) => stopped(e.payload)),
+      listen<unknown>("tray-error", (e) => failed(e.payload)),
+    ];
+    return () => unlisten.forEach((u) => u.then((f) => f()));
+  }, []);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {

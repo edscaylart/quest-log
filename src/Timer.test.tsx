@@ -2,6 +2,7 @@ import { screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
 import type { Client, Stopped, TimeEntry, Timer } from "./api";
+import { emit } from "@tauri-apps/api/event";
 import { renderWithIpc } from "./test/render";
 
 const acme: Client = { id: 1, name: "Acme", rateCents: 8500 };
@@ -180,5 +181,45 @@ describe("HUD Timer", () => {
     await user.click(screen.getByRole("tab", { name: "Log" }));
     await user.click(await screen.findByRole("button", { name: "Resume" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("Client is required");
+  });
+});
+
+describe("tray Timer", () => {
+  it("refreshes the HUD when the tray changes the Timer", async () => {
+    const core = fakeCore();
+    renderWithIpc(<App />, core);
+    await vi.waitFor(() => expect(screen.getByRole("button", { name: "▶ Start" })).toBeEnabled());
+
+    core.start_timer({ input: { clientId: 1, note: null } });
+    await emit("timer-changed", null);
+
+    expect(await screen.findByRole("timer")).toHaveTextContent("0:00:00");
+  });
+
+  it("opens the entry editor when a tray Stop needs editing", async () => {
+    renderWithIpc(<App />, fakeCore());
+    await screen.findByRole("button", { name: "▶ Start" });
+
+    await emit("timer-changed", { kind: "needsEdit", overlong: { clientId: 1, date: "2026-10-06", seconds: 25 * 3600, note: null } });
+
+    expect(await screen.findByRole("dialog", { name: "Fix Timer entry" })).toBeInTheDocument();
+  });
+
+  it("opens the Start modal when the tray has no last-used Patron", async () => {
+    renderWithIpc(<App />, fakeCore());
+    await vi.waitFor(() => expect(screen.getByRole("button", { name: "▶ Start" })).toBeEnabled());
+
+    await emit("tray-start");
+
+    expect(await screen.findByRole("dialog", { name: "Start Timer" })).toBeInTheDocument();
+  });
+
+  it("shows a failed tray action", async () => {
+    renderWithIpc(<App />, fakeCore());
+    await screen.findByRole("button", { name: "▶ Start" });
+
+    await emit("tray-error", { kind: "notFound", message: "No Timer is running" });
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("No Timer is running");
   });
 });

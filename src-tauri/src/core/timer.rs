@@ -37,7 +37,7 @@ pub struct TimerEdit {
 }
 
 /// What stopping a Timer did.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum Stopped {
     Saved {
@@ -51,7 +51,7 @@ pub enum Stopped {
 }
 
 /// A time entry the Timer would make, for the editor to fix.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Overlong {
     pub client_id: i64,

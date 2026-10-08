@@ -16,6 +16,6 @@ export function renderWithIpc(ui: ReactElement, commands: Record<string, Handler
     if (!handler) throw new Error(`unmocked command: ${cmd}`);
     calls.push({ cmd, args: args as Record<string, unknown> });
     return handler(args as Record<string, unknown>);
-  });
+  }, { shouldMockEvents: true });
   return { user: userEvent.setup(), calls, ...render(ui) };
 }

@@ -1,3 +1,4 @@
+import { listen } from "@tauri-apps/api/event";
 import { useEffect, useState, type FormEvent } from "react";
 import {
   discardTimer,
@@ -68,6 +69,12 @@ export function Hud({
     return () => document.removeEventListener("keydown", onKey);
   }, [timer, clients]);
 
+  // Tray Start with no last-used client lands here.
+  useEffect(() => {
+    const unlisten = listen("tray-start", () => clients.length && setStarting(true));
+    return () => void unlisten.then((f) => f());
+  }, [clients]);
+
   return (
     <header className="hud">
       {timer ? (
@@ -130,7 +137,7 @@ function Running({ timer, onEdit, onStop, onDiscard }: { timer: Timer; onEdit: (
       <button className="ghost" onClick={onDiscard}>
         Discard
       </button>
-      {/* ponytail: window hint only; the tray hint arrives in #4. No auto-stop. */}
+      {/* ponytail: a hint only, here and in the tray. No auto-stop. */}
       {elapsed >= STILL_WORKING_SECONDS && <p className="hint">Still working?</p>}
     </div>
   );

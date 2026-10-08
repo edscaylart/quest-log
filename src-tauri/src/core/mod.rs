@@ -45,7 +45,7 @@ impl Clock for SystemClock {
     }
 }
 
-#[derive(Debug, thiserror::Error, Serialize)]
+#[derive(Debug, thiserror::Error, Clone, Serialize)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum CoreError {
     #[error("{field}: {message}")]
