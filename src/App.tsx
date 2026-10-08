@@ -3,6 +3,7 @@ import { useEffect, useReducer, useState } from "react";
 import { getTimer, startTimer, toCoreError, type Overlong, type Stopped, type Timer } from "./api";
 import { label } from "./labels";
 import { ClientDetail, Clients } from "./Clients";
+import { Home } from "./Home";
 import { EntryModal, Log } from "./Log";
 import { Nav, type Screen } from "./nav";
 import { ProjectDetail } from "./Projects";
@@ -100,6 +101,8 @@ export default function App() {
               changed();
             }}
           />
+        ) : tab === "home" ? (
+          <Home version={version} onChange={changed} />
         ) : tab === "clients" ? (
           <Clients version={version} onChange={changed} />
         ) : tab === "log" ? (

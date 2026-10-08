@@ -2,7 +2,7 @@ import { screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
 import type { Client, EntryInput, TimeEntry } from "./api";
-import { renderWithIpc } from "./test/render";
+import { emptyDashboard, renderWithIpc } from "./test/render";
 
 const acme: Client = { id: 1, name: "Acme", rateCents: 8500, billingName: null, address: null, email: null, netDays: null };
 const bolt: Client = { id: 2, name: "Bolt", rateCents: 12000, billingName: null, address: null, email: null, netDays: null };
@@ -18,6 +18,7 @@ function fakeCore(entries: TimeEntry[] = [], lastUsed: number | null = null) {
     list_clients: () => [acme, bolt],
     last_used: () => (lastUsed ? { clientId: lastUsed, projectId: null } : null),
     get_timer: () => null,
+    dashboard: emptyDashboard,
     list_projects: () => [],
     list_time_entries: ({ clientId }: Record<string, unknown>) =>
       entries.filter((e) => clientId == null || e.clientId === clientId),

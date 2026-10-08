@@ -4,6 +4,7 @@ mod tray;
 use tauri::{Manager, State};
 
 use crate::core::clients::{self, Client, ClientEdit, NewClient, Repricing};
+use crate::core::dashboard::{self, Dashboard, PeriodInput};
 use crate::core::projects::{self, Project, ProjectInput};
 use crate::core::time_entries::{self, EntryInput, LastUsed, TimeEntry};
 use crate::core::timer::{self, Stopped, Timer, TimerEdit, TimerStart};
@@ -153,6 +154,11 @@ async fn discard_timer(db: State<'_, Db>) -> Result<(), CoreError> {
     timer::discard_timer(&db).await
 }
 
+#[tauri::command]
+async fn dashboard(db: State<'_, Db>, input: PeriodInput) -> Result<Dashboard, CoreError> {
+    dashboard::dashboard(&db, &SystemClock, &input).await
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -194,7 +200,8 @@ pub fn run() {
             stop_timer,
             update_timer,
             finish_timer,
-            discard_timer
+            discard_timer,
+            dashboard
         ])
         .build(tauri::generate_context!())
         .expect("error while building Quest Log")

@@ -2,7 +2,7 @@ import { screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
 import type { Client, Project, TimeEntry } from "./api";
-import { renderWithIpc } from "./test/render";
+import { emptyDashboard, renderWithIpc } from "./test/render";
 
 const client = (fields: Partial<Client> & Pick<Client, "id" | "name">): Client => ({
   rateCents: 8500,
@@ -47,6 +47,7 @@ function fakeCore({
     list_time_entries: ({ clientId }: Record<string, unknown>) => entries.filter((e) => clientId == null || e.clientId === clientId),
     last_used: () => ({ clientId: 1, projectId: null }),
     get_timer: () => null,
+    dashboard: emptyDashboard,
     start_timer: () => null,
     create_time_entry: () => entries[0],
     update_time_entry: () => entries[0],

@@ -19,3 +19,15 @@ export function renderWithIpc(ui: ReactElement, commands: Record<string, Handler
   }, { shouldMockEvents: true });
   return { user: userEvent.setup(), calls, ...render(ui) };
 }
+
+const zero = { seconds: 0, earnedCents: 0, uninvoicedCents: 0, invoicedUnpaidCents: 0, paidCents: 0 };
+
+/** A `dashboard` handler for screens that don't care about Home. */
+export const emptyDashboard = () => ({
+  period: { start: "2026-10-05", end: "2026-10-11" },
+  total: zero,
+  clients: [],
+  buckets: [],
+  weekly: false,
+  allTime: { invoicedUnpaidCents: 0, overdue: 0, uninvoicedCents: 0 },
+});

@@ -98,3 +98,24 @@ export const stopTimer = () => invoke<Stopped>("stop_timer");
 export const updateTimer = (input: TimerEdit) => invoke<Timer>("update_timer", { input });
 export const finishTimer = (input: EntryInput) => invoke<TimeEntry>("finish_timer", { input });
 export const discardTimer = () => invoke<void>("discard_timer");
+
+export type Preset = "1w" | "2w" | "3w" | "month" | "custom";
+/** A preset's current period, stepped `offset` period lengths; `start`/`end` (YYYY-MM-DD) are for custom. */
+export type PeriodInput = { preset: Preset; offset: number; start: string | null; end: string | null };
+/** Earnings: uninvoiced + invoiced-unpaid + paid always equals earned. */
+export type Figures = { seconds: number; earnedCents: number; uninvoicedCents: number; invoicedUnpaidCents: number; paidCents: number };
+export type Dashboard = {
+  /** Local days, both included. */
+  period: { start: string; end: string };
+  total: Figures;
+  /** Clients with time in the period, most hours first. */
+  clients: (Figures & { clientId: number; clientName: string })[];
+  /** Per day, or per Monday week when `weekly`. */
+  buckets: { start: string; seconds: number }[];
+  weekly: boolean;
+  /** Not tied to the period. `overdue` counts Sent invoices past due. */
+  allTime: { invoicedUnpaidCents: number; overdue: number; uninvoicedCents: number };
+};
+
+/** Includes the running Timer, live. */
+export const getDashboard = (input: PeriodInput) => invoke<Dashboard>("dashboard", { input });

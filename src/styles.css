@@ -415,3 +415,132 @@ textarea {
 textarea:focus {
   background: var(--light);
 }
+
+/* Home */
+
+.strip {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px var(--gap);
+  margin-bottom: var(--gap);
+  padding: 8px 12px;
+  border: var(--border);
+  background: var(--light);
+  font-weight: 700;
+}
+
+.stepper {
+  align-items: center;
+  margin-bottom: var(--gap);
+}
+
+.stepper .range,
+.stepper .pair {
+  flex: 1;
+  text-align: center;
+  font-weight: 700;
+}
+
+.figures {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: var(--gap);
+  margin: 0 0 var(--gap);
+}
+
+.figures div {
+  padding: 8px;
+  border: var(--border);
+}
+
+.figures dt {
+  font-weight: 500;
+  color: var(--dark);
+}
+
+.figures dd {
+  margin: 0;
+  font-size: 18px;
+}
+
+.chart {
+  margin: 0 0 var(--gap);
+}
+
+.chart .hint {
+  min-height: 1.2em;
+  margin: 0 0 4px;
+}
+
+.bars {
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+  height: 140px;
+  border-bottom: var(--border);
+}
+
+.bars button {
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.bars button:hover,
+.bars button:focus-visible,
+.bars button[aria-pressed="true"] {
+  background: var(--light);
+  outline: none;
+}
+
+.bars span {
+  width: 100%;
+  background: var(--dark);
+}
+
+.scroll-x {
+  overflow-x: auto;
+}
+
+.figures-table {
+  width: 100%;
+  border-collapse: collapse;
+  border: var(--border);
+}
+
+.figures-table th,
+.figures-table td {
+  padding: 6px 8px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.figures-table th:first-child,
+.figures-table td:first-child {
+  text-align: left;
+}
+
+.figures-table thead {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.figures-table tbody tr + tr {
+  border-top: 2px solid var(--dark);
+}
+
+button.link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}

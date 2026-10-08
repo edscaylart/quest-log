@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
 import type { Client, Stopped, TimeEntry, Timer } from "./api";
 import { emit } from "@tauri-apps/api/event";
-import { renderWithIpc } from "./test/render";
+import { emptyDashboard, renderWithIpc } from "./test/render";
 
 const acme: Client = { id: 1, name: "Acme", rateCents: 8500, billingName: null, address: null, email: null, netDays: null };
 const bolt: Client = { id: 2, name: "Bolt", rateCents: 12000, billingName: null, address: null, email: null, netDays: null };
@@ -17,6 +17,7 @@ function fakeCore({ clients = [acme, bolt], timer = null as Timer | null, entrie
     last_used: () => ({ clientId: 2, projectId: null }),
     list_time_entries: () => entries,
     get_timer: () => timer,
+    dashboard: emptyDashboard,
     list_projects: () => [],
     start_timer: ({ input }: Record<string, unknown>) => {
       const { clientId, note } = input as { clientId: number; note: string | null };

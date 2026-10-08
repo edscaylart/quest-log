@@ -13,6 +13,18 @@ export function formatDay(date: string) {
   return new Date(y, m - 1, d).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
 }
 
+/** "2026-10-06" → "Oct 6". */
+export function formatMonthDay(date: string) {
+  const [y, m, d] = date.split("-").map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+/** "Oct 5 – Oct 11, 2026", or with both years when they differ. */
+export function formatRange(start: string, end: string) {
+  const [sy, ey] = [start.slice(0, 4), end.slice(0, 4)];
+  return sy === ey ? `${formatMonthDay(start)} – ${formatMonthDay(end)}, ${ey}` : `${formatMonthDay(start)}, ${sy} – ${formatMonthDay(end)}, ${ey}`;
+}
+
 /** A Date as the local calendar day, YYYY-MM-DD (what `<input type="date">` holds). */
 export const localDate = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 

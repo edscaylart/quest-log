@@ -2,6 +2,7 @@
 //! time matters, and typed input; they return typed output or a [`CoreError`].
 
 pub mod clients;
+pub mod dashboard;
 pub mod projects;
 pub mod time_entries;
 pub mod timer;

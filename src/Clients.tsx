@@ -67,7 +67,7 @@ export function Clients({ version, onChange }: { version: number; onChange: () =
   );
 }
 
-function NewClientModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
+export function NewClientModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
   const [name, setName] = useState("");
   const [rate, setRate] = useState("");
   const [error, setError] = useState<CoreError | null>(null);

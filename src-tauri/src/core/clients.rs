@@ -152,7 +152,7 @@ pub(super) fn repricing(seconds: i64, old_rate: i64, new_rate: i64) -> Repricing
 }
 
 /// Seconds × cents/hour, rounded half up to the cent.
-fn amount(seconds: i64, rate_cents: i64) -> i64 {
+pub(super) fn amount(seconds: i64, rate_cents: i64) -> i64 {
     (seconds * rate_cents + 1800) / 3600
 }
 

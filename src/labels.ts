@@ -9,4 +9,7 @@ export const label = {
   projects: "Quests",
   noProject: "No Quest",
   complete: "Quest complete",
+  uninvoiced: "Unclaimed",
+  invoicedUnpaid: "Owed",
+  paid: "Treasury",
 } as const;
