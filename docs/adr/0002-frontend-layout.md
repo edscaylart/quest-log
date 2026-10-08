@@ -19,7 +19,7 @@ Domain subfolders use the canonical glossary terms and the Rust `core` module na
 **Import direction** is one-way:
 
 - `lib` is pure and imports nothing from the app.
-- `integrations` import only `lib`.
+- `integrations` import only `lib` and other `integrations` (the PDF save uses the Tauri files module).
 - `hooks` import `integrations` and `lib`.
 - `components` import `hooks`, `lib`, other components (any domain) and the Tauri command wrappers, which they may call directly for one-off mutations.
 - `pages` import anything. Only `App` imports pages.

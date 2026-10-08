@@ -480,7 +480,7 @@ function SealedDetail({ invoice, update, error, setError }: DetailProps) {
     setExporting(true);
     const sent = { ...invoice, snapshot: invoice.snapshot };
     // react-pdf is big; load it on first export, not at startup.
-    import("./InvoicePdf")
+    import("@/integrations/pdf/invoicePdf")
       .then((pdf) => pdf.exportInvoicePdf(sent))
       .then(() => setError(null), (err) => setError(`Couldn't export the PDF: ${toCoreError(err).message}`))
       .finally(() => setExporting(false));

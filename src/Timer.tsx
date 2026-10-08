@@ -1,10 +1,10 @@
-import { listen } from "@tauri-apps/api/event";
 import { useEffect, useState, type FormEvent } from "react";
 import { ProjectField } from "./Modal";
 import { Level } from "./Progress";
 import { Field } from "@/components/ui/Field";
 import { Modal } from "@/components/ui/Modal";
 import { discardTimer, lastUsed, listClients, startTimer, stopTimer, updateTimer } from "@/integrations/tauri/commands";
+import { onTrayStart } from "@/integrations/tauri/events";
 import type { Client } from "@/lib/clients/types";
 import { toCoreError, type CoreError } from "@/lib/errors";
 import { clientAndProject, formatClock, localDate, localTime } from "@/lib/format";
@@ -72,7 +72,7 @@ export function Hud({
 
   // Tray Start with no last-used client lands here.
   useEffect(() => {
-    const unlisten = listen("tray-start", () => clients.length && setStarting(true));
+    const unlisten = onTrayStart(() => clients.length && setStarting(true));
     return () => void unlisten.then((f) => f());
   }, [clients.length]);
 

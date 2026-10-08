@@ -1,6 +1,5 @@
 import { Document, Page, StyleSheet, Text, View, pdf } from "@react-pdf/renderer";
-import { save } from "@tauri-apps/plugin-dialog";
-import { writeFile } from "@tauri-apps/plugin-fs";
+import { saveBytes } from "@/integrations/tauri/files";
 import { formatCents, formatDate, formatInvoiceHours } from "@/lib/format";
 import type { Invoice, Snapshot } from "@/lib/invoices/types";
 
@@ -125,7 +124,5 @@ export async function invoicePdf({ snapshot, timesheet }: SentInvoice) {
 export const invoicePdfName = (x: Snapshot) => `${x.number} – ${x.client.name} – ${x.issueDate.slice(0, 7)}.pdf`.replace(/[/\\:]/g, "-");
 
 /** Asks where to save; cancelling writes nothing. */
-export async function exportInvoicePdf(invoice: SentInvoice) {
-  const path = await save({ defaultPath: invoicePdfName(invoice.snapshot), filters: [{ name: "PDF", extensions: ["pdf"] }] });
-  if (path) await writeFile(path, await invoicePdf(invoice));
-}
+export const exportInvoicePdf = (invoice: SentInvoice) =>
+  saveBytes(invoicePdfName(invoice.snapshot), { name: "PDF", extension: "pdf" }, () => invoicePdf(invoice));

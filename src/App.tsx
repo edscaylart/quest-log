@@ -1,4 +1,3 @@
-import { listen } from "@tauri-apps/api/event";
 import { useEffect, useReducer, useState } from "react";
 import { ClientDetail, Clients } from "./Clients";
 import { Home } from "./Home";
@@ -10,6 +9,7 @@ import { SettingsScreen } from "./Settings";
 import { Hud } from "./Timer";
 import { Nav, type Screen } from "@/hooks/useNav";
 import { getProgress, getTimer, startTimer } from "@/integrations/tauri/commands";
+import { onTimerChanged, onTrayError } from "@/integrations/tauri/events";
 import { toCoreError } from "@/lib/errors";
 import { label } from "@/lib/labels";
 import type { Progress } from "@/lib/progress/types";
@@ -67,8 +67,8 @@ export default function App() {
   // The tray drives the same core and reports here, so the window stays current.
   useEffect(() => {
     const unlisten = [
-      listen<Stopped | null>("timer-changed", (e) => stopped(e.payload)),
-      listen<unknown>("tray-error", (e) => failed(e.payload)),
+      onTimerChanged(stopped),
+      onTrayError(failed),
     ];
     return () => unlisten.forEach((u) => u.then((f) => f()));
   }, []);

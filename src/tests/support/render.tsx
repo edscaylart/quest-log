@@ -3,6 +3,9 @@ import userEvent from "@testing-library/user-event";
 import { mockIPC } from "@tauri-apps/api/mocks";
 import type { ReactElement } from "react";
 
+/** Fire a Tauri event as the tray would; needs `renderWithIpc`'s mocked events. */
+export { emit } from "@tauri-apps/api/event";
+
 type Handler = (args: Record<string, unknown>) => unknown;
 
 /** Lv 1, nothing to celebrate. */

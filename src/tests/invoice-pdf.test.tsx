@@ -1,7 +1,7 @@
 // @vitest-environment node
 // jsdom's typed arrays come from another realm, which garbles pdfkit's compressed streams.
 import { describe, expect, it } from "vitest";
-import { invoicePdf, invoicePdfName, type SentInvoice } from "@/InvoicePdf";
+import { invoicePdf, invoicePdfName, type SentInvoice } from "@/integrations/pdf/invoicePdf";
 import type { Snapshot } from "@/lib/invoices/types";
 import { label } from "@/lib/labels";
 import { pdfPages } from "@/tests/support/pdf";

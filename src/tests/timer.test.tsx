@@ -4,8 +4,7 @@ import App from "@/App";
 import type { Client } from "@/lib/clients/types";
 import type { TimeEntry } from "@/lib/time-entries/types";
 import type { Stopped, Timer } from "@/lib/timer/types";
-import { emit } from "@tauri-apps/api/event";
-import { emptyDashboard, renderWithIpc } from "@/tests/support/render";
+import { emit, emptyDashboard, renderWithIpc } from "@/tests/support/render";
 
 const acme: Client = { id: 1, name: "Acme", rateCents: 8500, billingName: null, address: null, email: null, netDays: null, archived: false, hasAvailable: false };
 const bolt: Client = { id: 2, name: "Bolt", rateCents: 12000, billingName: null, address: null, email: null, netDays: null, archived: false, hasAvailable: false };

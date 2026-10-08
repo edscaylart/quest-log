@@ -1,5 +1,3 @@
-import { open, save } from "@tauri-apps/plugin-dialog";
-import { writeFile } from "@tauri-apps/plugin-fs";
 import { useEffect, useState, type FormEvent } from "react";
 import { Field } from "@/components/ui/Field";
 import { Modal } from "@/components/ui/Modal";
@@ -14,6 +12,7 @@ import {
   revealDatabase,
   updateSettings,
 } from "@/integrations/tauri/commands";
+import { pickFile, pickSavePath, saveBytes } from "@/integrations/tauri/files";
 import type { DataInfo, LastBackup } from "@/lib/backups/types";
 import type { Client } from "@/lib/clients/types";
 import { loadSaved, presets, type Saved } from "@/lib/dashboard/savedPeriod";
@@ -111,6 +110,8 @@ export function SettingsScreen() {
   );
 }
 
+const databaseFile = { name: "Database", extension: "db" };
+
 function DataSection() {
   const [info, setInfo] = useState<DataInfo | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -138,7 +139,7 @@ function DataSection() {
 
   const backUp = () =>
     attempt(async () => {
-      const path = await save({ defaultPath: `Quest Log backup ${localDate(new Date())}.db`, filters: [{ name: "Database", extensions: ["db"] }] });
+      const path = await pickSavePath(`Quest Log backup ${localDate(new Date())}.db`, databaseFile);
       if (!path) return;
       await backUpNow(path);
       setDone("Backed up");
@@ -146,18 +147,17 @@ function DataSection() {
 
   const exportEntries = () =>
     attempt(async () => {
-      const path = await save({ defaultPath: `Quest Log time entries ${localDate(new Date())}.csv`, filters: [{ name: "CSV", extensions: ["csv"] }] });
-      if (!path) return;
-      const csv = await exportCsv({ preset, offset: 0, start: range?.start ?? null, end: range?.end ?? null }, clientId);
-      await writeFile(path, new TextEncoder().encode(csv));
-      setDone("Exported");
+      const saved = await saveBytes(`Quest Log time entries ${localDate(new Date())}.csv`, { name: "CSV", extension: "csv" }, async () =>
+        new TextEncoder().encode(await exportCsv({ preset, offset: 0, start: range?.start ?? null, end: range?.end ?? null }, clientId)),
+      );
+      if (saved) setDone("Exported");
     });
   const setRange = (side: "start" | "end") => (e: { target: { value: string } }) =>
     setPeriod({ preset, range: { start: range?.start ?? "", end: range?.end ?? "", [side]: e.target.value } });
 
   const pickBackup = () =>
     attempt(async () => {
-      const path = await open({ filters: [{ name: "Database", extensions: ["db"] }] });
+      const path = await pickFile(databaseFile);
       if (!path) return;
       setRestoring({ path, date: (await inspectBackup(path)).date });
     });
