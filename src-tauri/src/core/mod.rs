@@ -1,6 +1,7 @@
 //! Every domain rule lives here. Functions take a [`Db`], a [`Clock`] where
 //! time matters, and typed input; they return typed output or a [`CoreError`].
 
+pub mod backups;
 pub mod clients;
 pub mod dashboard;
 pub mod invoices;
@@ -85,12 +86,20 @@ impl From<sqlx::migrate::MigrateError> for CoreError {
 
 pub type Result<T> = std::result::Result<T, CoreError>;
 
+static MIGRATOR: sqlx::migrate::Migrator = sqlx::migrate!();
+
 /// Open (creating if needed) the database file and apply pending migrations.
-pub async fn open(path: &Path) -> Result<Db> {
+/// A database with data and a migration pending is snapshotted first; if
+/// that fails, nothing is migrated.
+pub async fn open(path: &Path, clock: &dyn Clock) -> Result<Db> {
     let options = SqliteConnectOptions::new()
         .filename(path)
         .create_if_missing(true);
     let db = SqlitePool::connect_with(options).await?;
-    sqlx::migrate!().run(&db).await?;
+    let applied = backups::applied_migrations(&db).await?;
+    if !applied.is_empty() && MIGRATOR.iter().any(|m| !applied.contains(&m.version)) {
+        backups::pre_migration_backup(&db, clock, path).await?;
+    }
+    MIGRATOR.run(&db).await?;
     Ok(db)
 }

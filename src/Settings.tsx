@@ -1,6 +1,21 @@
+import { open, save } from "@tauri-apps/plugin-dialog";
 import { useEffect, useState, type FormEvent } from "react";
-import { getSettings, toCoreError, updateSettings, type CoreError, type SettingsEdit } from "./api";
-import { Field } from "./Modal";
+import {
+  backUpNow,
+  getDataInfo,
+  getSettings,
+  inspectBackup,
+  restoreBackup,
+  revealDatabase,
+  toCoreError,
+  updateSettings,
+  type CoreError,
+  type DataInfo,
+  type LastBackup,
+  type SettingsEdit,
+} from "./api";
+import { formatDate, localDate } from "./format";
+import { Field, Modal } from "./Modal";
 
 export function SettingsScreen() {
   const [form, setForm] = useState<SettingsEdit | null>(null);
@@ -86,11 +101,92 @@ export function SettingsScreen() {
           </button>
         </div>
       </form>
-      {/* ponytail: placeholder until #13 fills Data (file location, backups, CSV). */}
-      <section className="day" aria-label="Data">
-        <h2>Data</h2>
-        <p className="hint">Nothing here yet.</p>
-      </section>
+      <DataSection />
     </>
   );
 }
+
+function DataSection() {
+  const [info, setInfo] = useState<DataInfo | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [backedUp, setBackedUp] = useState(false);
+  const [restoring, setRestoring] = useState<{ path: string; date: string } | null>(null);
+
+  useEffect(() => {
+    getDataInfo().then(setInfo);
+  }, []);
+
+  async function attempt(action: () => Promise<void>) {
+    setError(null);
+    setBackedUp(false);
+    try {
+      await action();
+    } catch (err) {
+      setError(toCoreError(err).message);
+    }
+  }
+
+  const backUp = () =>
+    attempt(async () => {
+      const path = await save({ defaultPath: `Quest Log backup ${localDate(new Date())}.db`, filters: [{ name: "Database", extensions: ["db"] }] });
+      if (!path) return;
+      await backUpNow(path);
+      setBackedUp(true);
+    });
+
+  const pickBackup = () =>
+    attempt(async () => {
+      const path = await open({ filters: [{ name: "Database", extensions: ["db"] }] });
+      if (!path) return;
+      setRestoring({ path, date: (await inspectBackup(path)).date });
+    });
+
+  // On success the app restarts with the restored data.
+  const restore = (path: string) => attempt(() => restoreBackup(path)).then(() => setRestoring(null));
+
+  return (
+    <section className="day" aria-label="Data">
+      <h2>Data</h2>
+      {info && (
+        <>
+          <p>{info.path}</p>
+          <p className="hint">{lastBackupText(info.lastBackup)}</p>
+        </>
+      )}
+      {error && <p className="error">{error}</p>}
+      <div className="actions">
+        {backedUp && (
+          <p className="hint" role="status">
+            Backed up
+          </p>
+        )}
+        <button type="button" onClick={() => attempt(revealDatabase)}>
+          Reveal in Finder
+        </button>
+        <button type="button" onClick={backUp}>
+          Back up now
+        </button>
+        <button type="button" onClick={pickBackup}>
+          Restore from backup…
+        </button>
+      </div>
+      {restoring && (
+        <Modal title="Restore backup?" onClose={() => setRestoring(null)}>
+          <p>Replace all data with backup from {formatDate(restoring.date)}?</p>
+          <p className="hint">Your current data is backed up first.</p>
+          <div className="actions">
+            <button type="button" onClick={() => setRestoring(null)}>
+              Cancel
+            </button>
+            <button type="button" className="primary" onClick={() => restore(restoring.path)}>
+              Restore
+            </button>
+          </div>
+        </Modal>
+      )}
+    </section>
+  );
+}
+
+const lastBackupText = (last: LastBackup) =>
+  last.kind === "done" ? `Last backup: ${formatDate(last.date)}` : `Last backup: failed ${formatDate(last.date)} (${last.message})`;

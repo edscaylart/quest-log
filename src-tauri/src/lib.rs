@@ -1,8 +1,11 @@
 pub mod core;
 mod tray;
 
-use tauri::{Manager, State};
+use std::path::PathBuf;
 
+use tauri::{AppHandle, Manager, State};
+
+use crate::core::backups::{self, BackupInfo, DataInfo};
 use crate::core::clients::{self, Client, ClientDeletion, ClientEdit, NewClient, Repricing};
 use crate::core::dashboard::{self, Dashboard, PeriodInput};
 use crate::core::invoices::{self, DraftCandidates, Invoice, InvoiceSummary, NewDraft};
@@ -286,6 +289,56 @@ async fn delete_invoice(db: State<'_, Db>, id: i64) -> Result<(), CoreError> {
     invoices::delete_invoice(&db, id).await
 }
 
+#[tauri::command]
+fn data_info(data: State<'_, DataInfo>) -> DataInfo {
+    data.inner().clone()
+}
+
+#[tauri::command]
+fn reveal_database(data: State<'_, DataInfo>) -> Result<(), CoreError> {
+    backups::reveal(&data.path)
+}
+
+#[tauri::command]
+async fn back_up_now(
+    db: State<'_, Db>,
+    data: State<'_, DataInfo>,
+    path: PathBuf,
+) -> Result<(), CoreError> {
+    backups::back_up(&db, &data.path, &path).await
+}
+
+#[tauri::command]
+async fn inspect_backup(path: PathBuf) -> Result<BackupInfo, CoreError> {
+    backups::inspect_backup(&SystemClock, &path).await
+}
+
+/// Restarts the app once the database is swapped; reopening migrates it.
+#[tauri::command]
+async fn restore_backup(
+    app: AppHandle,
+    db: State<'_, Db>,
+    data: State<'_, DataInfo>,
+    path: PathBuf,
+) -> Result<(), CoreError> {
+    let restored = backups::restore(&db, &SystemClock, &data.path, &path).await;
+    // Closed means the swap was attempted; reopen whichever file is there.
+    if db.is_closed() {
+        app.restart();
+    }
+    restored
+}
+
+/// A blocking alert before the app quits; it has no window yet.
+fn alert(title: &str, message: &str) {
+    // ponytail: macOS-only (ADR 0001); argv keeps the text out of the script.
+    let _ = std::process::Command::new("osascript")
+        .args(["-e", "on run argv", "-e"])
+        .arg("display alert (item 1 of argv) message (item 2 of argv) as critical")
+        .args(["-e", "end run", title, message])
+        .status();
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -294,8 +347,13 @@ pub fn run() {
         .setup(|app| {
             let dir = app.path().app_data_dir()?;
             std::fs::create_dir_all(&dir)?;
-            let db = tauri::async_runtime::block_on(core::open(&dir.join("quest-log.db")))?;
+            let path = dir.join("quest-log.db");
+            let db = tauri::async_runtime::block_on(core::open(&path, &SystemClock))
+                .inspect_err(|e| alert("Quest Log can't open its data", &e.to_string()))?;
+            let last_backup =
+                tauri::async_runtime::block_on(backups::daily_backup(&db, &SystemClock, &path));
             app.manage(db);
+            app.manage(DataInfo { path, last_backup });
             tray::setup(app.handle())?;
             Ok(())
         })
@@ -350,7 +408,12 @@ pub fn run() {
             unseal_invoice,
             mark_paid,
             unmark_paid,
-            delete_invoice
+            delete_invoice,
+            data_info,
+            reveal_database,
+            back_up_now,
+            inspect_backup,
+            restore_backup
         ])
         .build(tauri::generate_context!())
         .expect("error while building Quest Log")

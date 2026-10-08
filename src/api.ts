@@ -161,6 +161,19 @@ export type SettingsEdit = { [K in keyof Settings]: string };
 export const getSettings = () => invoke<Settings>("get_settings");
 export const updateSettings = (input: SettingsEdit) => invoke<Settings>("update_settings", { input });
 
+/** How the launch's daily backup went. Dates are local days, YYYY-MM-DD. */
+export type LastBackup = { kind: "done"; date: string } | { kind: "failed"; date: string; message: string };
+export type DataInfo = { path: string; lastBackup: LastBackup };
+
+export const getDataInfo = () => invoke<DataInfo>("data_info");
+export const revealDatabase = () => invoke<void>("reveal_database");
+/** Snapshot to `path`, replacing it. */
+export const backUpNow = (path: string) => invoke<void>("back_up_now", { path });
+/** Rejects a file that isn't a Quest Log backup, or is from a newer version. */
+export const inspectBackup = (path: string) => invoke<{ date: string }>("inspect_backup", { path });
+/** Snapshots current data, swaps in the backup and restarts the app. */
+export const restoreBackup = (path: string) => invoke<void>("restore_backup", { path });
+
 export type InvoiceState = "draft" | "sent" | "paid";
 /** Local days, both included. */
 export type Period = { start: string; end: string };

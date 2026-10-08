@@ -50,7 +50,8 @@ pub struct Fixture {
     pub db: Db,
     #[allow(dead_code)]
     pub clock: FakeClock,
-    path: PathBuf,
+    #[allow(dead_code)]
+    pub path: PathBuf,
     _dir: TempDir,
 }
 
@@ -58,9 +59,10 @@ impl Fixture {
     pub async fn new() -> Self {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("quest-log.db");
+        let clock = FakeClock::at(Utc.with_ymd_and_hms(2026, 10, 7, 9, 0, 0).unwrap());
         Self {
-            db: core::open(&path).await.unwrap(),
-            clock: FakeClock::at(Utc.with_ymd_and_hms(2026, 10, 7, 9, 0, 0).unwrap()),
+            db: core::open(&path, &clock).await.unwrap(),
+            clock,
             path,
             _dir: dir,
         }
@@ -70,7 +72,7 @@ impl Fixture {
     #[allow(dead_code)]
     pub async fn restart(mut self) -> Self {
         self.db.close().await;
-        self.db = core::open(&self.path).await.unwrap();
+        self.db = core::open(&self.path, &self.clock).await.unwrap();
         self
     }
 }
