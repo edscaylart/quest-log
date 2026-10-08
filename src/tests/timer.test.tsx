@@ -1,4 +1,4 @@
-import { screen, within } from "@testing-library/react";
+import { act, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import App from "@/App";
 import type { Client, Stopped, TimeEntry, Timer } from "@/api";
@@ -73,7 +73,7 @@ describe("HUD Timer", () => {
 
     expect(await within(hud).findByRole("timer")).toHaveTextContent("1:05:00");
     expect(hud).toHaveTextContent("Acme");
-    await vi.advanceTimersByTimeAsync(3000);
+    await act(() => vi.advanceTimersByTimeAsync(3000));
     expect(within(hud).getByRole("timer")).toHaveTextContent("1:05:03");
 
     await user.click(within(hud).getByRole("button", { name: "Stop" }));
@@ -113,7 +113,7 @@ describe("HUD Timer", () => {
     await screen.findByRole("timer");
     expect(screen.queryByText("Still working?")).not.toBeInTheDocument();
 
-    await vi.advanceTimersByTimeAsync(60_000);
+    await act(() => vi.advanceTimersByTimeAsync(60_000));
 
     expect(screen.getByText("Still working?")).toBeInTheDocument();
   });

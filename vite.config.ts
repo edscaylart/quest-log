@@ -10,6 +10,8 @@ export default defineConfig({
   clearScreen: false,
   server: { port: 1420, strictPort: true, watch: { ignored: ["**/src-tauri/**"] } },
   test: {
+    // Only src: git worktrees under .claude/ hold stale copies of the tests.
+    dir: "src",
     environment: "jsdom",
     setupFiles: ["./src/tests/support/setup.ts"],
   },
