@@ -145,3 +145,43 @@ export type SettingsEdit = { [K in keyof Settings]: string };
 
 export const getSettings = () => invoke<Settings>("get_settings");
 export const updateSettings = (input: SettingsEdit) => invoke<Settings>("update_settings", { input });
+
+export type InvoiceState = "draft" | "sent" | "paid";
+/** Local days, both included. */
+export type Period = { start: string; end: string };
+/** One per project, then "General"; amount is exact seconds × rate, rounded once. */
+export type InvoiceLine = { projectId: number | null; description: string; seconds: number; rateCents: number; amountCents: number };
+export type Invoice = {
+  id: number;
+  clientId: number;
+  clientName: string;
+  state: InvoiceState;
+  period: Period;
+  /** Print the timesheet page. */
+  timesheet: boolean;
+  lines: InvoiceLine[];
+  seconds: number;
+  totalCents: number;
+  /** Its entries, newest first. */
+  entries: TimeEntry[];
+  /** The client's entries on no invoice, newest first. */
+  available: TimeEntry[];
+  /** How many of `available` fall in the period. */
+  newInPeriod: number;
+};
+export type InvoiceSummary = Pick<Invoice, "id" | "clientId" | "clientName" | "state" | "period" | "seconds" | "totalCents">;
+/** What a new Draft would hold: entries in the period on no invoice, and how many older ones there are. */
+export type DraftCandidates = { period: Period; entries: TimeEntry[]; older: number; olderSince: string | null };
+export type NewDraft = { clientId: number; start: string; end: string; entryIds: number[] };
+
+/** `period` null is the default: after the client's last invoice period (else its earliest uninvoiced entry) to today. */
+export const draftCandidates = (clientId: number, period: PeriodInput | null) => invoke<DraftCandidates>("draft_candidates", { clientId, period });
+export const createDraft = (input: NewDraft) => invoke<Invoice>("create_draft", { input });
+/** Newest first. */
+export const listInvoices = () => invoke<InvoiceSummary[]>("list_invoices");
+export const getInvoice = (id: number) => invoke<Invoice>("get_invoice", { id });
+export const addInvoiceEntry = (id: number, entryId: number) => invoke<Invoice>("add_invoice_entry", { id, entryId });
+export const removeInvoiceEntry = (id: number, entryId: number) => invoke<Invoice>("remove_invoice_entry", { id, entryId });
+export const setInvoiceTimesheet = (id: number, timesheet: boolean) => invoke<Invoice>("set_invoice_timesheet", { id, timesheet });
+/** Frees its entries. */
+export const deleteInvoice = (id: number) => invoke<void>("delete_invoice", { id });

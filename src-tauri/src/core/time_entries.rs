@@ -85,9 +85,10 @@ pub async fn update_entry(
     let current = get_entry(db, id).await?;
     let v = validate(db, clock, &input, current.project_id).await?;
 
+    // Moving it to another client drops it off its Draft, which is the old client's.
     let updated = sqlx::query(
-        "UPDATE time_entries SET client_id = ?, project_id = ?, date = ?, seconds = ?, started_at = ?, ended_at = ?, note = ? \
-         WHERE id = ?",
+        "UPDATE time_entries SET client_id = ?1, project_id = ?2, date = ?3, seconds = ?4, started_at = ?5, ended_at = ?6, note = ?7, \
+         invoice_id = CASE WHEN client_id = ?1 THEN invoice_id END WHERE id = ?8",
     )
     .bind(input.client_id)
     .bind(v.project_id)
@@ -107,7 +108,7 @@ pub async fn update_entry(
     get_entry(db, id).await
 }
 
-/// Permanent. Locking for invoiced entries arrives with invoices.
+/// Permanent; an entry on a Draft drops off it. Locking for Sent entries arrives with #25.
 pub async fn delete_entry(db: &Db, id: i64) -> Result<()> {
     let deleted = sqlx::query("DELETE FROM time_entries WHERE id = ?")
         .bind(id)
@@ -148,7 +149,7 @@ pub async fn list_entries(db: &Db, client_id: Option<i64>) -> Result<Vec<TimeEnt
     .await?)
 }
 
-const SELECT: &str = "SELECT e.id, e.client_id, c.name AS client_name, e.project_id, \
+pub(super) const SELECT: &str = "SELECT e.id, e.client_id, c.name AS client_name, e.project_id, \
     p.name AS project_name, COALESCE(p.rate_cents, c.rate_cents) AS rate_cents, e.date, e.seconds, \
     e.started_at, e.ended_at, e.note FROM time_entries e JOIN clients c ON c.id = e.client_id \
     LEFT JOIN projects p ON p.id = e.project_id";

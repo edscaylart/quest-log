@@ -5,6 +5,7 @@ use tauri::{Manager, State};
 
 use crate::core::clients::{self, Client, ClientEdit, NewClient, Repricing};
 use crate::core::dashboard::{self, Dashboard, PeriodInput};
+use crate::core::invoices::{self, DraftCandidates, Invoice, InvoiceSummary, NewDraft};
 use crate::core::progress::{self, Progress};
 use crate::core::projects::{self, Project, ProjectInput};
 use crate::core::settings::{self, Settings, SettingsEdit};
@@ -181,6 +182,62 @@ async fn update_settings(db: State<'_, Db>, input: SettingsEdit) -> Result<Setti
     settings::update_settings(&db, input).await
 }
 
+#[tauri::command]
+async fn draft_candidates(
+    db: State<'_, Db>,
+    client_id: i64,
+    period: Option<PeriodInput>,
+) -> Result<DraftCandidates, CoreError> {
+    invoices::draft_candidates(&db, &SystemClock, client_id, period.as_ref()).await
+}
+
+#[tauri::command]
+async fn create_draft(db: State<'_, Db>, input: NewDraft) -> Result<Invoice, CoreError> {
+    invoices::create_draft(&db, &SystemClock, input).await
+}
+
+#[tauri::command]
+async fn list_invoices(db: State<'_, Db>) -> Result<Vec<InvoiceSummary>, CoreError> {
+    invoices::list_invoices(&db).await
+}
+
+#[tauri::command]
+async fn get_invoice(db: State<'_, Db>, id: i64) -> Result<Invoice, CoreError> {
+    invoices::get_invoice(&db, id).await
+}
+
+#[tauri::command]
+async fn add_invoice_entry(
+    db: State<'_, Db>,
+    id: i64,
+    entry_id: i64,
+) -> Result<Invoice, CoreError> {
+    invoices::add_invoice_entry(&db, id, entry_id).await
+}
+
+#[tauri::command]
+async fn remove_invoice_entry(
+    db: State<'_, Db>,
+    id: i64,
+    entry_id: i64,
+) -> Result<Invoice, CoreError> {
+    invoices::remove_invoice_entry(&db, id, entry_id).await
+}
+
+#[tauri::command]
+async fn set_invoice_timesheet(
+    db: State<'_, Db>,
+    id: i64,
+    timesheet: bool,
+) -> Result<Invoice, CoreError> {
+    invoices::set_invoice_timesheet(&db, id, timesheet).await
+}
+
+#[tauri::command]
+async fn delete_invoice(db: State<'_, Db>, id: i64) -> Result<(), CoreError> {
+    invoices::delete_invoice(&db, id).await
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -227,7 +284,15 @@ pub fn run() {
             progress,
             acknowledge_level_up,
             get_settings,
-            update_settings
+            update_settings,
+            draft_candidates,
+            create_draft,
+            list_invoices,
+            get_invoice,
+            add_invoice_entry,
+            remove_invoice_entry,
+            set_invoice_timesheet,
+            delete_invoice
         ])
         .build(tauri::generate_context!())
         .expect("error while building Quest Log")

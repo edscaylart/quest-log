@@ -4,6 +4,7 @@ import { getProgress, getTimer, startTimer, toCoreError, type Overlong, type Pro
 import { label } from "./labels";
 import { ClientDetail, Clients } from "./Clients";
 import { Home } from "./Home";
+import { DraftEditor, Invoices } from "./Invoices";
 import { EntryModal, Log } from "./Log";
 import { Nav, type Screen } from "./nav";
 import { LevelUp } from "./Progress";
@@ -116,6 +117,17 @@ export default function App() {
               changed();
             }}
           />
+        ) : top?.kind === "invoice" ? (
+          <DraftEditor
+            key={top.id}
+            id={top.id}
+            version={version}
+            onChange={changed}
+            onDeleted={() => {
+              back();
+              changed();
+            }}
+          />
         ) : tab === "home" ? (
           <Home version={version} onChange={changed} />
         ) : tab === "clients" ? (
@@ -128,9 +140,9 @@ export default function App() {
             onChange={changed}
             onResume={(e) => startTimer({ clientId: e.clientId, projectId: e.projectId, note: e.note }).then(stopped, failed)}
           />
-        ) : (
-          <Placeholder title={tabs.find((t) => t.id === tab)!.title} />
-        )}
+        ) : tab === "invoices" ? (
+          <Invoices version={version} onChange={changed} />
+        ) : null}
         </Nav.Provider>
       </main>
       <nav className="tabbar" role="tablist">
@@ -155,14 +167,5 @@ export default function App() {
         />
       )}
     </div>
-  );
-}
-
-function Placeholder({ title }: { title: string }) {
-  return (
-    <>
-      <h1>{title}</h1>
-      <p className="hint">Nothing here yet.</p>
-    </>
   );
 }

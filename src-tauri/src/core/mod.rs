@@ -3,6 +3,7 @@
 
 pub mod clients;
 pub mod dashboard;
+pub mod invoices;
 pub mod progress;
 pub mod projects;
 pub mod settings;
