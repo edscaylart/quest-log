@@ -5,6 +5,7 @@ import { EditClientModal } from "@/components/clients/EditClientModal";
 import { ProjectList } from "@/components/projects/ProjectList";
 import { ProjectModal } from "@/components/projects/ProjectModal";
 import { RecentEntries } from "@/components/time-entries/RecentEntries";
+import { ErrorLine } from "@/components/ui/ErrorLine";
 import { clientDeletion, getClient, listProjects, listTimeEntries, setClientArchived } from "@/integrations/tauri/commands";
 import type { ClientDeletion, Client as ClientRecord } from "@/lib/clients/types";
 import { toCoreError } from "@/lib/errors";
@@ -37,11 +38,7 @@ export function Client({ id, version, onChange, onDeleted }: { id: number; versi
     <>
       <h1>{client.name}</h1>
       <ClientDetails client={client} onEdit={() => setEditing(true)} onToggleArchived={toggleArchived} onDelete={askDelete} />
-      {error && (
-        <p className="error" role="alert">
-          {error}
-        </p>
-      )}
+      <ErrorLine error={error} />
 
       <ProjectList projects={projects} onNew={client.archived ? null : () => setCreatingProject(true)} />
 

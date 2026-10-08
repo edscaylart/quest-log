@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { Confirm } from "@/components/invoices/Confirm";
-import { ErrorLine } from "@/components/invoices/ErrorLine";
 import { InvoiceHeading } from "@/components/invoices/InvoiceHeading";
 import { InvoiceLines } from "@/components/invoices/InvoiceLines";
 import { TimeEntryModal } from "@/components/time-entries/TimeEntryModal";
+import { Confirm } from "@/components/ui/Confirm";
+import { ErrorLine } from "@/components/ui/ErrorLine";
 import { Modal } from "@/components/ui/Modal";
 import { addInvoiceEntry, deleteInvoice, removeInvoiceEntry, sendInvoice, setInvoiceNetDays, setInvoiceTimesheet } from "@/integrations/tauri/commands";
 import { toCoreError } from "@/lib/errors";

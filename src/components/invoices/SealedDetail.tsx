@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { Confirm } from "@/components/invoices/Confirm";
-import { ErrorLine } from "@/components/invoices/ErrorLine";
 import { InvoiceHeading } from "@/components/invoices/InvoiceHeading";
 import { InvoiceLines } from "@/components/invoices/InvoiceLines";
+import { Confirm } from "@/components/ui/Confirm";
+import { ErrorLine } from "@/components/ui/ErrorLine";
 import { Field } from "@/components/ui/Field";
 import { markPaid, unmarkPaid, unsealInvoice } from "@/integrations/tauri/commands";
 import { toCoreError } from "@/lib/errors";

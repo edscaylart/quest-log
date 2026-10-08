@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { ProjectField } from "@/components/projects/ProjectField";
 import { Level } from "@/components/progress/Level";
+import { ErrorLine } from "@/components/ui/ErrorLine";
 import { Field } from "@/components/ui/Field";
 import { Modal } from "@/components/ui/Modal";
 import { useElapsed } from "@/hooks/timer/useElapsed";
@@ -76,11 +77,7 @@ export function Hud({
           ▶ Start
         </button>
       )}
-      {error && (
-        <p className="error" role="alert">
-          {error}
-        </p>
-      )}
+      <ErrorLine error={error} />
       <div className="level">
         {progress && <Level progress={progress} />}
         <button className="ghost icon" aria-label="Settings" onClick={onSettings}>

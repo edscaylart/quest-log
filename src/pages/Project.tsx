@@ -3,6 +3,7 @@ import { DeleteProjectModal } from "@/components/projects/DeleteProjectModal";
 import { ProjectDetails } from "@/components/projects/ProjectDetails";
 import { ProjectModal } from "@/components/projects/ProjectModal";
 import { RecentEntries } from "@/components/time-entries/RecentEntries";
+import { ErrorLine } from "@/components/ui/ErrorLine";
 import { getClient, getProject, listTimeEntries, setProjectComplete } from "@/integrations/tauri/commands";
 import type { Client } from "@/lib/clients/types";
 import { toCoreError } from "@/lib/errors";
@@ -44,11 +45,7 @@ export function Project({
     <>
       <h1>{project.name}</h1>
       <ProjectDetails project={project} client={client} onEdit={() => setEditing(true)} onToggleComplete={toggleComplete} onDelete={() => setDeleting(true)} />
-      {error && (
-        <p className="error" role="alert">
-          {error}
-        </p>
-      )}
+      <ErrorLine error={error} />
 
       <section className="day" aria-label="Time entries">
         <h2>Time entries</h2>
