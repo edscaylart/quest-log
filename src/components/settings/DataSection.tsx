@@ -1,118 +1,18 @@
-import { useEffect, useState, type FormEvent } from "react";
-import { Field } from "@/components/ui/Field";
+import { useEffect, useState } from "react";
 import { Modal } from "@/components/ui/Modal";
-import {
-  backUpNow,
-  exportCsv,
-  getDataInfo,
-  getSettings,
-  inspectBackup,
-  listClients,
-  restoreBackup,
-  revealDatabase,
-  updateSettings,
-} from "@/integrations/tauri/commands";
+import { backUpNow, exportCsv, getDataInfo, inspectBackup, listClients, restoreBackup, revealDatabase } from "@/integrations/tauri/commands";
 import { pickFile, pickSavePath, saveBytes } from "@/integrations/tauri/files";
-import type { DataInfo, LastBackup } from "@/lib/backups/types";
+import type { DataInfo } from "@/lib/backups/types";
 import type { Client } from "@/lib/clients/types";
 import { loadSaved, presets, type Saved } from "@/lib/dashboard/savedPeriod";
-import { toCoreError, type CoreError } from "@/lib/errors";
-import { formatDate, localDate } from "@/lib/format";
+import { toCoreError } from "@/lib/errors";
+import { formatDate } from "@/lib/format";
 import { label } from "@/lib/labels";
-import type { SettingsEdit } from "@/lib/settings/types";
-
-export function SettingsScreen() {
-  const [form, setForm] = useState<SettingsEdit | null>(null);
-  const [error, setError] = useState<CoreError | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [saved, setSaved] = useState(false);
-
-  useEffect(() => {
-    getSettings().then((s) =>
-      setForm({
-        name: s.name,
-        businessName: s.businessName ?? "",
-        address: s.address ?? "",
-        email: s.email ?? "",
-        taxId: s.taxId ?? "",
-        paymentInstructions: s.paymentInstructions ?? "",
-        netDays: s.netDays.toString(),
-        invoicePrefix: s.invoicePrefix,
-        nextInvoiceNumber: s.nextInvoiceNumber.toString(),
-      }),
-    );
-  }, []);
-
-  if (!form) return null;
-  const set = (field: keyof SettingsEdit) => (e: { target: { value: string } }) => {
-    setForm({ ...form, [field]: e.target.value });
-    setSaved(false);
-  };
-  const fieldError = (field: string) => (error?.kind === "invalid" && error.field === field ? error.message : null);
-
-  async function submit(e: FormEvent) {
-    e.preventDefault();
-    setBusy(true);
-    try {
-      await updateSettings(form!);
-      setError(null);
-      setSaved(true);
-    } catch (err) {
-      setError(toCoreError(err));
-    }
-    setBusy(false);
-  }
-
-  const text = (field: keyof SettingsEdit, title: string, extra: object = {}) => (
-    <Field id={`settings-${field}`} label={title} error={fieldError(field)}>
-      <input id={`settings-${field}`} value={form[field]} onChange={set(field)} aria-invalid={!!fieldError(field)} {...extra} />
-    </Field>
-  );
-  const area = (field: keyof SettingsEdit, title: string) => (
-    <Field id={`settings-${field}`} label={title} error={null}>
-      <textarea id={`settings-${field}`} rows={3} value={form[field]} onChange={set(field)} />
-    </Field>
-  );
-
-  return (
-    <>
-      <h1>Settings</h1>
-      <form onSubmit={submit} noValidate>
-        <section className="day" aria-label="Business details">
-          <h2>Business details</h2>
-          {text("name", "Name")}
-          {text("businessName", "Business name")}
-          {area("address", "Address")}
-          {text("email", "Email", { type: "email" })}
-          {text("taxId", "Tax ID")}
-          {area("paymentInstructions", "Payment instructions")}
-        </section>
-        <section className="day" aria-label="Invoicing">
-          <h2>Invoicing</h2>
-          {text("netDays", "Net days", { inputMode: "numeric" })}
-          {text("invoicePrefix", "Invoice prefix")}
-          {text("nextInvoiceNumber", "Next invoice number", { inputMode: "numeric" })}
-        </section>
-        {error && error.kind !== "invalid" && <p className="error">{error.message}</p>}
-        <div className="actions">
-          {saved && (
-            <p className="hint" role="status">
-              Saved
-            </p>
-          )}
-          <button type="submit" className="primary" disabled={busy}>
-            Save
-          </button>
-        </div>
-      </form>
-      <DataSection />
-    </>
-  );
-}
+import { backupFileName, csvFileName, lastBackupText } from "@/lib/settings/dataFiles";
 
 const databaseFile = { name: "Database", extension: "db" };
 
-function DataSection() {
+export function DataSection() {
   const [info, setInfo] = useState<DataInfo | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
@@ -139,7 +39,7 @@ function DataSection() {
 
   const backUp = () =>
     attempt(async () => {
-      const path = await pickSavePath(`Quest Log backup ${localDate(new Date())}.db`, databaseFile);
+      const path = await pickSavePath(backupFileName(new Date()), databaseFile);
       if (!path) return;
       await backUpNow(path);
       setDone("Backed up");
@@ -147,7 +47,7 @@ function DataSection() {
 
   const exportEntries = () =>
     attempt(async () => {
-      const saved = await saveBytes(`Quest Log time entries ${localDate(new Date())}.csv`, { name: "CSV", extension: "csv" }, async () =>
+      const saved = await saveBytes(csvFileName(new Date()), { name: "CSV", extension: "csv" }, async () =>
         new TextEncoder().encode(await exportCsv({ preset, offset: 0, start: range?.start ?? null, end: range?.end ?? null }, clientId)),
       );
       if (saved) setDone("Exported");
@@ -235,6 +135,3 @@ function DataSection() {
     </section>
   );
 }
-
-const lastBackupText = (last: LastBackup) =>
-  last.kind === "done" ? `Last backup: ${formatDate(last.date)}` : `Last backup: failed ${formatDate(last.date)} (${last.message})`;

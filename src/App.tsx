@@ -4,7 +4,6 @@ import { Clients } from "@/pages/Clients";
 import { Home } from "@/pages/Home";
 import { Invoice } from "@/pages/Invoice";
 import { Invoices } from "@/pages/Invoices";
-import { SettingsScreen } from "./Settings";
 import { LevelUp } from "@/components/progress/LevelUp";
 import { TimeEntryModal } from "@/components/time-entries/TimeEntryModal";
 import { Hud } from "@/components/timer/Hud";
@@ -17,6 +16,7 @@ import type { Progress } from "@/lib/progress/types";
 import type { Overlong, Stopped, Timer } from "@/lib/timer/types";
 import { Log } from "@/pages/Log";
 import { Project } from "@/pages/Project";
+import { Settings } from "@/pages/Settings";
 
 // 8×8 pixel icons, one string of unit squares each.
 const icons = {
@@ -109,7 +109,7 @@ export default function App() {
           </button>
         )}
         {top?.kind === "settings" ? (
-          <SettingsScreen />
+          <Settings />
         ) : top?.kind === "client" ? (
           <Client
             key={top.id}
