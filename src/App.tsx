@@ -2,10 +2,10 @@ import { useEffect, useReducer, useState } from "react";
 import { ClientDetail, Clients } from "./Clients";
 import { Home } from "./Home";
 import { InvoiceDetail, Invoices } from "./Invoices";
-import { EntryModal, Log } from "./Log";
 import { ProjectDetail } from "./Projects";
 import { SettingsScreen } from "./Settings";
 import { LevelUp } from "@/components/progress/LevelUp";
+import { TimeEntryModal } from "@/components/time-entries/TimeEntryModal";
 import { Hud } from "@/components/timer/Hud";
 import { Nav, type Screen } from "@/hooks/useNav";
 import { getProgress, getTimer, startTimer } from "@/integrations/tauri/commands";
@@ -14,6 +14,7 @@ import { toCoreError } from "@/lib/errors";
 import { label } from "@/lib/labels";
 import type { Progress } from "@/lib/progress/types";
 import type { Overlong, Stopped, Timer } from "@/lib/timer/types";
+import { Log } from "@/pages/Log";
 
 // 8×8 pixel icons, one string of unit squares each.
 const icons = {
@@ -168,7 +169,7 @@ export default function App() {
         ))}
       </nav>
       {fixing && (
-        <EntryModal
+        <TimeEntryModal
           entry={null}
           overlong={fixing}
           onClose={() => setFixing(null)}

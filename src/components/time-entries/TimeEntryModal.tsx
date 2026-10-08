@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { ProjectField } from "./Modal";
+import { ProjectField } from "@/Modal";
 import { Field } from "@/components/ui/Field";
 import { Modal } from "@/components/ui/Modal";
 import {
@@ -9,165 +9,18 @@ import {
   finishTimer,
   lastUsed,
   listClients,
-  listTimeEntries,
   updateTimeEntry,
 } from "@/integrations/tauri/commands";
 import type { Client } from "@/lib/clients/types";
 import { toCoreError, type CoreError } from "@/lib/errors";
-import { clientAndProject, formatClock, formatDay, formatSeconds, localDate, localTime } from "@/lib/format";
+import { clientAndProject, formatDay, formatSeconds, localDate, localTime } from "@/lib/format";
 import { label } from "@/lib/labels";
+import { editableDuration } from "@/lib/time-entries/editableDuration";
 import type { Span, TimeEntry } from "@/lib/time-entries/types";
 import type { Overlong } from "@/lib/timer/types";
 
-/**
- * `creating` lives in App so ⌘N can open the new-entry modal from any tab.
- * `version` changes when entries changed elsewhere (e.g. a Timer stopped);
- * `onChange` reports a saved or deleted entry, which bumps it.
- */
-export function Log({
-  creating,
-  setCreating,
-  version,
-  onChange,
-  onResume,
-}: {
-  creating: boolean;
-  setCreating: (open: boolean) => void;
-  version: number;
-  onChange: () => void;
-  onResume: (entry: TimeEntry) => void;
-}) {
-  const [clients, setClients] = useState<Client[]>([]);
-  const [clientId, setClientId] = useState<number | null>(null);
-  const [entries, setEntries] = useState<TimeEntry[] | null>(null);
-  const [editing, setEditing] = useState<TimeEntry | null>(null);
-
-  useEffect(() => {
-    listClients().then(setClients);
-  }, []);
-  useEffect(() => {
-    listTimeEntries(clientId).then(setEntries);
-  }, [clientId, version]);
-
-  const close = () => {
-    setCreating(false);
-    setEditing(null);
-  };
-  const saved = () => {
-    close();
-    onChange();
-  };
-
-  return (
-    <>
-      <h1>Log</h1>
-      <div className="toolbar">
-        <select
-          aria-label={`${label.client} filter`}
-          value={clientId ?? ""}
-          onChange={(e) => setClientId(e.target.value ? Number(e.target.value) : null)}
-        >
-          <option value="">{label.allClients}</option>
-          {clients
-            .filter((c) => !c.archived)
-            .map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          {clients.some((c) => c.archived) && (
-            <optgroup label={label.archived}>
-              {clients
-                .filter((c) => c.archived)
-                .map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-            </optgroup>
-          )}
-        </select>
-        <button className="primary" aria-label="New time entry" onClick={() => setCreating(true)}>
-          +
-        </button>
-      </div>
-      {entries?.length === 0 && <p className="hint">No time logged yet.</p>}
-      {byDay(entries ?? []).map(([date, dayEntries]) => (
-        <section key={date} className="day" aria-label={formatDay(date)}>
-          <h2>
-            <span>{formatDay(date)}</span>
-            <span className="num">{formatSeconds(dayEntries.reduce((sum, e) => sum + e.seconds, 0))}</span>
-          </h2>
-          <ul className="rows">
-            {dayEntries.map((e) => (
-              <li key={e.id} className="row entry">
-                <button onClick={() => setEditing(e)}>
-                  <span className="who">{clientAndProject(e)}</span>
-                  <span className="note">{e.note}</span>
-                  <span className="num">{formatSeconds(e.seconds)}</span>
-                </button>
-                {e.locked && (
-                  <span className="lock" role="img" aria-label="Locked" title={`On a ${label.invoiceState.sent} ${label.invoice}`}>
-                    🔒
-                  </span>
-                )}
-                <button className="ghost icon" aria-label="Resume" onClick={() => onResume(e)}>
-                  ▶
-                </button>
-              </li>
-            ))}
-          </ul>
-        </section>
-      ))}
-      {(creating || editing) && <EntryModal key={editing?.id ?? "new"} entry={editing} onClose={close} onSaved={saved} />}
-    </>
-  );
-}
-
-/** A short list of entries (newest first) that open in the edit modal. */
-export function RecentEntries({ entries, onChange }: { entries: TimeEntry[]; onChange: () => void }) {
-  const [editing, setEditing] = useState<TimeEntry | null>(null);
-  if (!entries.length) return <p className="hint">No time logged yet.</p>;
-  return (
-    <>
-      <ul className="rows">
-        {entries.map((e) => (
-          <li key={e.id} className="row entry">
-            <button onClick={() => setEditing(e)}>
-              <span className="who">{formatDay(e.date)}</span>
-              <span className="note">{[e.projectName, e.note].filter(Boolean).join(" · ")}</span>
-              <span className="num">{formatSeconds(e.seconds)}</span>
-            </button>
-          </li>
-        ))}
-      </ul>
-      {editing && (
-        <EntryModal
-          key={editing.id}
-          entry={editing}
-          onClose={() => setEditing(null)}
-          onSaved={() => {
-            setEditing(null);
-            onChange();
-          }}
-        />
-      )}
-    </>
-  );
-}
-
-/** Entries arrive newest first; keep that order within and across days. */
-function byDay(entries: TimeEntry[]) {
-  const days = new Map<string, TimeEntry[]>();
-  for (const e of entries) days.set(e.date, [...(days.get(e.date) ?? []), e]);
-  return [...days];
-}
-
-/** Like formatSeconds, but keeps leftover seconds so an untouched edit saves the same duration. */
-const editableDuration = (s: number) => (s % 60 ? formatClock(s) : formatSeconds(s));
-
 /** New (neither prop), edit (`entry`; read-only if locked), or fix a Timer that ran over 24 hours (`overlong`). */
-export function EntryModal({
+export function TimeEntryModal({
   entry,
   overlong,
   onClose,

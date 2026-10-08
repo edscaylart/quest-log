@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { EntryModal } from "./Log";
+import { TimeEntryModal } from "@/components/time-entries/TimeEntryModal";
 import { Field } from "@/components/ui/Field";
 import { Modal } from "@/components/ui/Modal";
 import { useNav } from "@/hooks/useNav";
@@ -425,7 +425,7 @@ function DraftEditor({ invoice, update, error, setError, onChange, onDeleted }: 
         </Modal>
       )}
       {editing && (
-        <EntryModal
+        <TimeEntryModal
           key={editing.id}
           entry={editing}
           onClose={() => setEditing(null)}

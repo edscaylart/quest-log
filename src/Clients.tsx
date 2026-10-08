@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { RecentEntries } from "./Log";
+import { RecentEntries } from "@/components/time-entries/RecentEntries";
 import { RepriceConfirm, reprices } from "./Modal";
 import { ProjectModal } from "./Projects";
 import { Field } from "@/components/ui/Field";
