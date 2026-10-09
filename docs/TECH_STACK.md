@@ -57,3 +57,9 @@ Each has a Rust crate registered in `src-tauri/src/lib.rs`; the dialog and fs pl
 | Dialog | `tauri-plugin-dialog`, `@tauri-apps/plugin-dialog` | Open and save panels for exports, backups and restore; the core's "Update available" and "Update failed" dialogs. |
 | File system | `tauri-plugin-fs`, `@tauri-apps/plugin-fs` | Writes exported files. The frontend may only write files (`fs:allow-write-file`). |
 | Updater | `tauri-plugin-updater` | Checks GitHub Releases on launch in release builds and installs a signed update. Pinned to 2.13.2 or later: earlier versions can delete the app on a macOS install. Rust only. |
+
+## Pointers
+
+- [ARCHITECTURE.md](ARCHITECTURE.md)
+- [ENV.md](ENV.md)
+- [TESTING.md](TESTING.md)

@@ -62,3 +62,10 @@ The backups folder (`src-tauri/src/core/backups.rs`) holds:
 ## Configuration
 
 There are no environment variables. The app reads none, and building, running and testing need none. Configuration (the invoice header's seller details, default Net days, invoice prefix and next number) lives in the app's **Settings** screen and is stored in the database.
+
+## Pointers
+
+- [ARCHITECTURE.md](ARCHITECTURE.md)
+- [TECH_STACK.md](TECH_STACK.md)
+- [TESTING.md](TESTING.md)
+- [DATABASE.md](DATABASE.md)

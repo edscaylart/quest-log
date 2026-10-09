@@ -186,3 +186,9 @@ Any other move is rejected, and only a Draft can be deleted.
 - A running Timer counts live as Uninvoiced on its start day (it earns before it is stopped, but gives no XP).
 - Home's all-time figures, which ignore the period: total Invoiced-unpaid, total Uninvoiced, and the count of overdue invoices. Each total is summed across all clients and rounded once, so it can differ by a cent from adding up per-client figures.
 - **CSV export:** the period's time entries, oldest first, optionally for one client. The running Timer is left out. Each row's amount is rounded on its own, so a sum can differ from invoice line totals by a few cents.
+
+## Pointers
+
+- [ARCHITECTURE.md](ARCHITECTURE.md)
+- [DATABASE.md](DATABASE.md)
+- [TESTING.md](TESTING.md)

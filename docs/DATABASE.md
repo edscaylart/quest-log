@@ -152,3 +152,9 @@ A backup from a newer Quest Log is refused ("update first"), as is any file that
 ## Rule: migrations update this doc
 
 Any PR that adds a migration also updates DATABASE.md: new tables, columns, enums and invariants. If this page and the migrations ever disagree, the migrations win. Fix the page.
+
+## Pointers
+
+- [ARCHITECTURE.md](ARCHITECTURE.md)
+- [CONTEXT.md](CONTEXT.md)
+- [ENV.md](ENV.md)

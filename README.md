@@ -44,6 +44,8 @@ pnpm tauri build
 
 The app lands in `src-tauri/target/release/bundle/macos/Quest Log.app`. `pnpm tauri dev` runs it with live reload.
 
+Working on the code? Start at [ARCHITECTURE.md](docs/ARCHITECTURE.md): the app map, the folder rules and the full doc index. Commands and toolchain are in [ENV.md](docs/ENV.md), tests in [TESTING.md](docs/TESTING.md).
+
 ## Your data
 
 Everything lives in one SQLite file on your Mac, never in the cloud:
@@ -63,3 +65,11 @@ Everything lives in one SQLite file on your Mac, never in the cloud:
 [MIT](LICENSE). The bundled IBM Plex Mono font is under the [SIL Open Font License](src/styles/fonts/OFL.txt).
 
 Personal project. Open an issue before a PR.
+
+## Pointers
+
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+- [docs/CONTEXT.md](docs/CONTEXT.md)
+- [docs/ENV.md](docs/ENV.md)
+- [docs/TESTING.md](docs/TESTING.md)
+- [AGENTS.md](AGENTS.md)
