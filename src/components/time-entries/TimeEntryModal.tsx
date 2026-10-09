@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { ProjectField } from "@/components/projects/ProjectField";
+import { ErrorLine } from "@/components/ui/ErrorLine";
 import { Field } from "@/components/ui/Field";
 import { Modal } from "@/components/ui/Modal";
 import { useClients } from "@/hooks/clients/useClients";
@@ -46,13 +47,14 @@ export function TimeEntryModal({
   const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   // Retired clients take no new entries; an entry keeps its own.
-  const listed = useClients((c) => !c.archived || c.id === initial?.clientId, [initial]);
+  const { clients: listed, error: clientsError } = useClients((c) => !c.archived || c.id === initial?.clientId, [initial]);
   // Boxed so a null lastUsed still reads as loaded.
-  const lastPick = useLoad(() => (initial ? null : lastUsed().then((used) => ({ used }))), [initial]).data;
-  // A new entry seeds its form once, before its Clients show.
+  const { data: lastPick, error: lastUsedError } = useLoad(() => (initial ? null : lastUsed().then((used) => ({ used }))), [initial]);
+  // A new entry seeds its form once, before its Clients show. A failed lastUsed
+  // is silent on purpose: it only picks defaults, so the form seeds without it.
   const [seeded, setSeeded] = useState(!!initial);
-  if (!seeded && listed && lastPick) {
-    const { used } = lastPick;
+  if (!seeded && listed && (lastPick || lastUsedError)) {
+    const used = lastPick?.used;
     const known = listed.some((c) => c.id === used?.clientId);
     setSeeded(true);
     setClientId(known ? used!.clientId : (listed[0]?.id ?? 0));
@@ -100,6 +102,7 @@ export function TimeEntryModal({
           🔒 On a {label.invoiceState.sent} {label.invoice}. Unseal it to change this entry.
         </p>
       )}
+      <ErrorLine error={clientsError} />
       {clients?.length === 0 ? (
         <>
           <p className="hint">Add a {label.client} first.</p>

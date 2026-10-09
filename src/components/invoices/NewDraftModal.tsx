@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ErrorLine } from "@/components/ui/ErrorLine";
 import { Field } from "@/components/ui/Field";
 import { Modal } from "@/components/ui/Modal";
 import { useClients } from "@/hooks/clients/useClients";
@@ -18,7 +19,7 @@ const choices = [
 
 export function NewDraftModal({ onClose, onCreated }: { onClose: () => void; onCreated: (id: number) => void }) {
   // A retired client only while it has time left to bill.
-  const clients = useClients((c) => !c.archived || c.hasAvailable);
+  const { clients, error: clientsError } = useClients((c) => !c.archived || c.hasAvailable);
   const [pickedClientId, setPickedClientId] = useState(0);
   const clientId = pickedClientId || (clients?.[0]?.id ?? 0);
   const [choice, setChoice] = useState<PeriodChoice>({ kind: "default" });
@@ -32,7 +33,7 @@ export function NewDraftModal({ onClose, onCreated }: { onClose: () => void; onC
     [clientId, choice.kind, custom?.start, custom?.end],
   );
   // A failed create shows until a newer load replaces the candidates it was for.
-  const error = loadError ?? (failedFor === candidates ? (createError?.message ?? null) : null);
+  const error = clientsError ?? loadError ?? (failedFor === candidates ? (createError?.message ?? null) : null);
 
   const period = candidates?.period;
   const toggle = (id: number) => {
@@ -114,7 +115,7 @@ export function NewDraftModal({ onClose, onCreated }: { onClose: () => void; onC
           </ul>
         </>
       )}
-      {error && <p className="error">{error}</p>}
+      <ErrorLine error={error} />
       <div className="actions">
         <button type="button" className="ghost" onClick={onClose}>
           Cancel

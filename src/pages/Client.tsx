@@ -14,15 +14,17 @@ import type { ClientDeletion } from "@/lib/clients/types";
 const RECENT = 10;
 
 export function Client({ id, version, onChange, onDeleted }: { id: number; version: number; onChange: () => void; onDeleted: () => void }) {
-  const client = useLoad(() => getClient(id), [id, version]).data;
-  const projects = useLoad(() => listProjects(id), [id, version]).data ?? [];
-  const entries = useLoad(() => listTimeEntries(id).then((list) => list.slice(0, RECENT)), [id, version]).data ?? [];
+  const { data: client, error: clientError } = useLoad(() => getClient(id), [id, version]);
+  const { data: projects, error: projectsError } = useLoad(() => listProjects(id), [id, version]);
+  const { data: entries, error: entriesError } = useLoad(() => listTimeEntries(id).then((list) => list.slice(0, RECENT)), [id, version]);
   const [editing, setEditing] = useState(false);
   const [creatingProject, setCreatingProject] = useState(false);
   const [deleting, setDeleting] = useState<ClientDeletion | null>(null);
   const { error, fail } = useFormAction();
 
-  if (!client) return null;
+  const loadError = clientError ?? projectsError ?? entriesError;
+
+  if (!client) return <ErrorLine error={loadError} />;
   const toggleArchived = () => setClientArchived(id, !client.archived).then(onChange, fail);
   const askDelete = () => clientDeletion(id).then(setDeleting, fail);
 
@@ -30,13 +32,13 @@ export function Client({ id, version, onChange, onDeleted }: { id: number; versi
     <>
       <h1>{client.name}</h1>
       <ClientDetails client={client} onEdit={() => setEditing(true)} onToggleArchived={toggleArchived} onDelete={askDelete} />
-      <ErrorLine error={error?.message ?? null} />
+      <ErrorLine error={loadError ?? error?.message ?? null} />
 
-      <ProjectList projects={projects} onNew={client.archived ? null : () => setCreatingProject(true)} />
+      <ProjectList projects={projects ?? []} onNew={client.archived ? null : () => setCreatingProject(true)} />
 
       <section className="day" aria-label="Recent time entries">
         <h2>Recent</h2>
-        <RecentEntries entries={entries} onChange={onChange} />
+        <RecentEntries entries={entries ?? []} onChange={onChange} />
       </section>
 
       {editing && (

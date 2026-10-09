@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ErrorLine } from "@/components/ui/ErrorLine";
 import { Modal } from "@/components/ui/Modal";
 import { useClients } from "@/hooks/clients/useClients";
 import { useFormAction } from "@/hooks/useFormAction";
@@ -14,11 +15,11 @@ import { backupFileName, csvFileName, lastBackupText } from "@/lib/settings/data
 const databaseFile = { name: "Database", extension: "db" };
 
 export function DataSection() {
-  const info = useLoad(getDataInfo, []).data;
+  const { data: info, error: infoError } = useLoad(getDataInfo, []);
   const { error, setError, run } = useFormAction();
   const [done, setDone] = useState<string | null>(null);
   const [restoring, setRestoring] = useState<{ path: string; date: string } | null>(null);
-  const clients = useClients() ?? [];
+  const { clients, error: clientsError } = useClients();
   // The Dashboard's period at offset 0; Custom starts on the days it last showed.
   const [{ preset, range }, setPeriod] = useState<Saved>(loadSaved);
   const [clientId, setClientId] = useState<number | null>(null);
@@ -66,7 +67,7 @@ export function DataSection() {
           <p className="hint">{lastBackupText(info.lastBackup)}</p>
         </>
       )}
-      {error && <p className="error">{error.message}</p>}
+      <ErrorLine error={infoError ?? clientsError ?? error?.message ?? null} />
       <div className="actions">
         {done && (
           <p className="hint" role="status">
@@ -100,7 +101,7 @@ export function DataSection() {
         )}
         <select aria-label={`Export ${label.client}`} value={clientId ?? ""} onChange={(e) => setClientId(e.target.value ? Number(e.target.value) : null)}>
           <option value="">{label.allClients}</option>
-          {clients.map((c) => (
+          {(clients ?? []).map((c) => (
             <option key={c.id} value={c.id}>
               {c.archived ? `${c.name} (${label.archived})` : c.name}
             </option>

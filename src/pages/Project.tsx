@@ -19,27 +19,29 @@ export function Project({
   onChange: () => void;
   onDeleted: () => void;
 }) {
-  const project = useLoad(() => getProject(id), [id, version]).data;
+  const { data: project, error: projectError } = useLoad(() => getProject(id), [id, version]);
   const clientId = project?.clientId;
-  const client = useLoad(() => (clientId ? getClient(clientId) : null), [clientId, version]).data;
-  const entries =
-    useLoad(
-      // ponytail: filtered here; a project filter in core when lists get long.
-      () => (clientId ? listTimeEntries(clientId).then((all) => all.filter((e) => e.projectId === id)) : null),
-      [clientId, id, version],
-    ).data ?? [];
+  const { data: client, error: clientError } = useLoad(() => (clientId ? getClient(clientId) : null), [clientId, version]);
+  const { data: loadedEntries, error: entriesError } = useLoad(
+    // ponytail: filtered here; a project filter in core when lists get long.
+    () => (clientId ? listTimeEntries(clientId).then((all) => all.filter((e) => e.projectId === id)) : null),
+    [clientId, id, version],
+  );
+  const entries = loadedEntries ?? [];
   const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const { error, fail } = useFormAction();
 
-  if (!project || !client) return null;
+  const loadError = projectError ?? clientError ?? entriesError;
+
+  if (!project || !client) return <ErrorLine error={loadError} />;
   const toggleComplete = () => setProjectComplete(id, !project.complete).then(onChange, fail);
 
   return (
     <>
       <h1>{project.name}</h1>
       <ProjectDetails project={project} client={client} onEdit={() => setEditing(true)} onToggleComplete={toggleComplete} onDelete={() => setDeleting(true)} />
-      <ErrorLine error={error?.message ?? null} />
+      <ErrorLine error={loadError ?? error?.message ?? null} />
 
       <section className="day" aria-label="Time entries">
         <h2>Time entries</h2>

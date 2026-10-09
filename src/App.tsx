@@ -49,11 +49,11 @@ export default function App() {
   const [newEntry, setNewEntry] = useState(false);
   // Bumped when clients, entries or the Timer change, so every screen reloads.
   const [version, changed] = useReducer((n: number) => n + 1, 0);
-  const timer = useLoad(getTimer, [version]).data;
+  const { data: timer, error: timerLoadError } = useLoad(getTimer, [version]);
   const [fixing, setFixing] = useState<Overlong | null>(null);
   const { error: timerError, setError: setTimerError, fail: failed } = useFormAction();
 
-  const progress = useLoad(getProgress, [version]).data;
+  const { data: progress, error: progressError } = useLoad(getProgress, [version]);
 
   const stopped = (outcome: Stopped | null) => {
     if (outcome?.kind === "needsEdit") setFixing(outcome.overlong);
@@ -93,7 +93,7 @@ export default function App() {
 
   return (
     <div className="app">
-      <Hud timer={timer} progress={progress} version={version} error={timerError?.message ?? null} onStopped={stopped} onChange={() => stopped(null)} onError={failed} onSettings={openSettings} />
+      <Hud timer={timer} progress={progress} version={version} error={timerError?.message ?? timerLoadError ?? progressError} onStopped={stopped} onChange={() => stopped(null)} onError={failed} onSettings={openSettings} />
       <LevelUp level={progress?.levelUp ?? null} />
       <main>
         <Nav.Provider value={{ push: (screen) => setStack([...stack, screen]) }}>
