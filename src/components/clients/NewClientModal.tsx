@@ -1,28 +1,21 @@
 import { useState, type FormEvent } from "react";
 import { Field } from "@/components/ui/Field";
 import { Modal } from "@/components/ui/Modal";
+import { useFormAction } from "@/hooks/useFormAction";
 import { createClient } from "@/integrations/tauri/commands";
-import { toCoreError, type CoreError } from "@/lib/errors";
 import { label } from "@/lib/labels";
 
 export function NewClientModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
   const [name, setName] = useState("");
   const [rate, setRate] = useState("");
-  const [error, setError] = useState<CoreError | null>(null);
-  const [busy, setBusy] = useState(false);
+  const { error, busy, run, fieldError } = useFormAction();
 
-  const fieldError = (field: string) => (error?.kind === "invalid" && error.field === field ? error.message : null);
-
-  async function submit(e: FormEvent) {
+  function submit(e: FormEvent) {
     e.preventDefault();
-    setBusy(true);
-    try {
+    run(async () => {
       await createClient({ name, rate });
       onCreated();
-    } catch (err) {
-      setError(toCoreError(err));
-      setBusy(false);
-    }
+    });
   }
 
   return (

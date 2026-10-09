@@ -2,9 +2,9 @@ import { useState } from "react";
 import { Field } from "@/components/ui/Field";
 import { Modal } from "@/components/ui/Modal";
 import { useClients } from "@/hooks/clients/useClients";
+import { useFormAction } from "@/hooks/useFormAction";
 import { useLoad } from "@/hooks/useLoad";
 import { createDraft, draftCandidates } from "@/integrations/tauri/commands";
-import { toCoreError } from "@/lib/errors";
 import { formatRange } from "@/lib/format";
 import { entryLabel } from "@/lib/invoices/entryLabel";
 import { periodInput, type PeriodChoice } from "@/lib/invoices/periodInput";
@@ -23,8 +23,8 @@ export function NewDraftModal({ onClose, onCreated }: { onClose: () => void; onC
   const clientId = pickedClientId || (clients?.[0]?.id ?? 0);
   const [choice, setChoice] = useState<PeriodChoice>({ kind: "default" });
   const [unticked, setUnticked] = useState<Set<number>>(new Set());
-  const [failed, setFailed] = useState<{ message: string; candidates: DraftCandidates } | null>(null);
-  const [busy, setBusy] = useState(false);
+  const { error: createError, busy, run } = useFormAction();
+  const [failedFor, setFailedFor] = useState<DraftCandidates | null>(null);
 
   const custom = choice.kind === "custom" ? choice : null;
   const { data: candidates, error: loadError } = useLoad(
@@ -32,7 +32,7 @@ export function NewDraftModal({ onClose, onCreated }: { onClose: () => void; onC
     [clientId, choice.kind, custom?.start, custom?.end],
   );
   // A failed create shows until a newer load replaces the candidates it was for.
-  const error = loadError ?? (failed?.candidates === candidates ? failed.message : null);
+  const error = loadError ?? (failedFor === candidates ? (createError?.message ?? null) : null);
 
   const period = candidates?.period;
   const toggle = (id: number) => {
@@ -43,15 +43,12 @@ export function NewDraftModal({ onClose, onCreated }: { onClose: () => void; onC
 
   async function create() {
     if (!period || !candidates) return;
-    setBusy(true);
-    try {
+    const ok = await run(async () => {
       const entryIds = candidates.entries.map((e) => e.id).filter((id) => !unticked.has(id));
       const invoice = await createDraft({ clientId, start: period.start, end: period.end, entryIds });
       onCreated(invoice.id);
-    } catch (err) {
-      setFailed({ message: toCoreError(err).message, candidates });
-      setBusy(false);
-    }
+    });
+    if (!ok) setFailedFor(candidates);
   }
 
   return (

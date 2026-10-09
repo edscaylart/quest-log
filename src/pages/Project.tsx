@@ -4,9 +4,9 @@ import { ProjectDetails } from "@/components/projects/ProjectDetails";
 import { ProjectModal } from "@/components/projects/ProjectModal";
 import { RecentEntries } from "@/components/time-entries/RecentEntries";
 import { ErrorLine } from "@/components/ui/ErrorLine";
+import { useFormAction } from "@/hooks/useFormAction";
 import { useLoad } from "@/hooks/useLoad";
 import { getClient, getProject, listTimeEntries, setProjectComplete } from "@/integrations/tauri/commands";
-import { toCoreError } from "@/lib/errors";
 
 export function Project({
   id,
@@ -30,17 +30,16 @@ export function Project({
     ).data ?? [];
   const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { error, fail } = useFormAction();
 
   if (!project || !client) return null;
-  const fail = (err: unknown) => setError(toCoreError(err).message);
   const toggleComplete = () => setProjectComplete(id, !project.complete).then(onChange, fail);
 
   return (
     <>
       <h1>{project.name}</h1>
       <ProjectDetails project={project} client={client} onEdit={() => setEditing(true)} onToggleComplete={toggleComplete} onDelete={() => setDeleting(true)} />
-      <ErrorLine error={error} />
+      <ErrorLine error={error?.message ?? null} />
 
       <section className="day" aria-label="Time entries">
         <h2>Time entries</h2>

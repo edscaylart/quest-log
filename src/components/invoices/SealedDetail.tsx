@@ -5,7 +5,7 @@ import { Confirm } from "@/components/ui/Confirm";
 import { ErrorLine } from "@/components/ui/ErrorLine";
 import { Field } from "@/components/ui/Field";
 import { markPaid, unmarkPaid, unsealInvoice } from "@/integrations/tauri/commands";
-import { toCoreError } from "@/lib/errors";
+import { toCoreError, type CoreError } from "@/lib/errors";
 import { formatDay, formatMonthDay, formatSeconds, localDate } from "@/lib/format";
 import type { Invoice } from "@/lib/invoices/types";
 import { label } from "@/lib/labels";
@@ -14,11 +14,12 @@ type Props = {
   invoice: Invoice;
   update: (action: Promise<Invoice>) => Promise<void>;
   error: string | null;
-  setError: (error: string | null) => void;
+  setError: (error: CoreError | null) => void;
+  fail: (err: unknown) => void;
 };
 
 /** Sent or Paid: read-only, with its state actions. */
-export function SealedDetail({ invoice, update, error, setError }: Props) {
+export function SealedDetail({ invoice, update, error, setError, fail }: Props) {
   const id = invoice.id;
   const [exporting, setExporting] = useState(false);
   const exportPdf = () => {
@@ -28,7 +29,7 @@ export function SealedDetail({ invoice, update, error, setError }: Props) {
     // react-pdf is big; load it on first export, not at startup.
     import("@/integrations/pdf/invoicePdf")
       .then((pdf) => pdf.exportInvoicePdf(sent))
-      .then(() => setError(null), (err) => setError(`Couldn't export the PDF: ${toCoreError(err).message}`))
+      .then(() => setError(null), (err) => fail(`Couldn't export the PDF: ${toCoreError(err).message}`))
       .finally(() => setExporting(false));
   };
   const [confirming, setConfirming] = useState<"unseal" | "paid" | "unpaid" | null>(null);

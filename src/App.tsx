@@ -7,11 +7,11 @@ import { Invoices } from "@/pages/Invoices";
 import { LevelUp } from "@/components/progress/LevelUp";
 import { TimeEntryModal } from "@/components/time-entries/TimeEntryModal";
 import { Hud } from "@/components/timer/Hud";
+import { useFormAction } from "@/hooks/useFormAction";
 import { useLoad } from "@/hooks/useLoad";
 import { Nav, type Screen } from "@/hooks/useNav";
 import { getProgress, getTimer, startTimer } from "@/integrations/tauri/commands";
 import { onTimerChanged, onTrayError } from "@/integrations/tauri/events";
-import { toCoreError } from "@/lib/errors";
 import { label } from "@/lib/labels";
 import type { Overlong, Stopped } from "@/lib/timer/types";
 import { Log } from "@/pages/Log";
@@ -51,8 +51,7 @@ export default function App() {
   const [version, changed] = useReducer((n: number) => n + 1, 0);
   const timer = useLoad(getTimer, [version]).data;
   const [fixing, setFixing] = useState<Overlong | null>(null);
-  const [timerError, setTimerError] = useState<string | null>(null);
-  const failed = (err: unknown) => setTimerError(toCoreError(err).message);
+  const { error: timerError, setError: setTimerError, fail: failed } = useFormAction();
 
   const progress = useLoad(getProgress, [version]).data;
 
@@ -94,7 +93,7 @@ export default function App() {
 
   return (
     <div className="app">
-      <Hud timer={timer} progress={progress} version={version} error={timerError} onStopped={stopped} onChange={() => stopped(null)} onError={failed} onSettings={openSettings} />
+      <Hud timer={timer} progress={progress} version={version} error={timerError?.message ?? null} onStopped={stopped} onChange={() => stopped(null)} onError={failed} onSettings={openSettings} />
       <LevelUp level={progress?.levelUp ?? null} />
       <main>
         <Nav.Provider value={{ push: (screen) => setStack([...stack, screen]) }}>

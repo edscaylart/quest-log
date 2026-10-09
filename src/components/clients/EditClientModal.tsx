@@ -2,9 +2,9 @@ import { useState, type FormEvent } from "react";
 import { RepriceConfirm } from "@/components/projects/RepriceConfirm";
 import { Field } from "@/components/ui/Field";
 import { Modal } from "@/components/ui/Modal";
+import { useFormAction } from "@/hooks/useFormAction";
 import { previewClientRate, updateClient } from "@/integrations/tauri/commands";
 import type { Client, ClientEdit, Repricing } from "@/lib/clients/types";
-import { toCoreError, type CoreError } from "@/lib/errors";
 import { label } from "@/lib/labels";
 import { reprices } from "@/lib/projects/reprices";
 
@@ -18,22 +18,11 @@ export function EditClientModal({ client, onClose, onSaved }: { client: Client; 
     email: client.email ?? "",
     netDays: client.netDays?.toString() ?? "",
   });
-  const [error, setError] = useState<CoreError | null>(null);
-  const [busy, setBusy] = useState(false);
+  const { error, busy, run: attempt, fieldError } = useFormAction();
   const [confirming, setConfirming] = useState<Repricing | null>(null);
   const set = (field: keyof ClientEdit) => (e: { target: { value: string } }) => setForm({ ...form, [field]: e.target.value });
-  const fieldError = (field: string) => (error?.kind === "invalid" && error.field === field ? error.message : null);
-
-  async function run(action: () => Promise<unknown>) {
-    setBusy(true);
-    try {
-      await action();
-    } catch (err) {
-      setError(toCoreError(err));
-      setConfirming(null);
-    }
-    setBusy(false);
-  }
+  // A failure lands back on the form.
+  const run = (action: () => Promise<unknown>) => attempt(action).then((ok) => ok || setConfirming(null));
 
   const save = () =>
     run(async () => {

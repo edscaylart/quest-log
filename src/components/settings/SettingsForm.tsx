@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { Field } from "@/components/ui/Field";
+import { useFormAction } from "@/hooks/useFormAction";
 import { updateSettings } from "@/integrations/tauri/commands";
-import { toCoreError, type CoreError } from "@/lib/errors";
 import type { Settings, SettingsEdit } from "@/lib/settings/types";
 
 export function SettingsForm({ settings: s }: { settings: Settings }) {
@@ -16,27 +16,20 @@ export function SettingsForm({ settings: s }: { settings: Settings }) {
     invoicePrefix: s.invoicePrefix,
     nextInvoiceNumber: s.nextInvoiceNumber.toString(),
   });
-  const [error, setError] = useState<CoreError | null>(null);
-  const [busy, setBusy] = useState(false);
+  const { error, busy, run, fieldError } = useFormAction();
   const [saved, setSaved] = useState(false);
 
   const set = (field: keyof SettingsEdit) => (e: { target: { value: string } }) => {
     setForm({ ...form, [field]: e.target.value });
     setSaved(false);
   };
-  const fieldError = (field: string) => (error?.kind === "invalid" && error.field === field ? error.message : null);
 
-  async function submit(e: FormEvent) {
+  function submit(e: FormEvent) {
     e.preventDefault();
-    setBusy(true);
-    try {
+    run(async () => {
       await updateSettings(form);
-      setError(null);
       setSaved(true);
-    } catch (err) {
-      setError(toCoreError(err));
-    }
-    setBusy(false);
+    });
   }
 
   const text = (field: keyof SettingsEdit, title: string, extra: object = {}) => (

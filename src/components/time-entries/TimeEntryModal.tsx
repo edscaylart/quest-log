@@ -3,6 +3,7 @@ import { ProjectField } from "@/components/projects/ProjectField";
 import { Field } from "@/components/ui/Field";
 import { Modal } from "@/components/ui/Modal";
 import { useClients } from "@/hooks/clients/useClients";
+import { useFormAction } from "@/hooks/useFormAction";
 import { useLoad } from "@/hooks/useLoad";
 import {
   createTimeEntry,
@@ -12,7 +13,6 @@ import {
   lastUsed,
   updateTimeEntry,
 } from "@/integrations/tauri/commands";
-import { toCoreError, type CoreError } from "@/lib/errors";
 import { clientAndProject, formatDay, formatSeconds, localDate, localTime } from "@/lib/format";
 import { label } from "@/lib/labels";
 import { editableDuration } from "@/lib/time-entries/editableDuration";
@@ -41,8 +41,7 @@ export function TimeEntryModal({
   const [start, setStart] = useState(entry?.startedAt != null ? localTime(entry.startedAt) : "");
   const [end, setEnd] = useState(entry?.endedAt != null ? localTime(entry.endedAt) : "");
   const [note, setNote] = useState(initial?.note ?? "");
-  const [error, setError] = useState<CoreError | null>(null);
-  const [busy, setBusy] = useState(false);
+  const { error, busy, run: attempt, fieldError } = useFormAction();
   const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   // Retired clients take no new entries; an entry keeps its own.
@@ -60,19 +59,12 @@ export function TimeEntryModal({
   }
   const clients = seeded ? listed : null;
 
-  const fieldError = (field: string) => (error?.kind === "invalid" && error.field === field ? error.message : null);
-
-  async function run(action: () => Promise<unknown>) {
-    setBusy(true);
-    try {
+  // A failed delete lands back on the form.
+  const run = (action: () => Promise<unknown>) =>
+    attempt(async () => {
       await action();
       onSaved();
-    } catch (err) {
-      setError(toCoreError(err));
-      setConfirmingDelete(false);
-      setBusy(false);
-    }
-  }
+    }).then((ok) => ok || setConfirmingDelete(false));
 
   function submit(e: FormEvent) {
     e.preventDefault();
@@ -142,7 +134,7 @@ export function TimeEntryModal({
             projectId={projectId}
             setProjectId={setProjectId}
             keep={initial?.projectId}
-            error={error}
+            error={fieldError("project")}
           />
           <Field id="entry-date" label="Date" error={fieldError("date")}>
             <input id="entry-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} aria-invalid={!!fieldError("date")} />

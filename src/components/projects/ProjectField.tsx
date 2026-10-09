@@ -1,7 +1,6 @@
 import { Field } from "@/components/ui/Field";
 import { useLoad } from "@/hooks/useLoad";
 import { listProjects } from "@/integrations/tauri/commands";
-import type { CoreError } from "@/lib/errors";
 import { label } from "@/lib/labels";
 
 /**
@@ -21,18 +20,18 @@ export function ProjectField({
   projectId: number | null;
   setProjectId: (id: number | null) => void;
   keep?: number | null;
-  error: CoreError | null;
+  /** The invalid-project message, if any. */
+  error: string | null;
 }) {
   const projects = useLoad(() => (clientId ? listProjects(clientId) : null), [clientId]).data ?? [];
 
-  const message = error?.kind === "invalid" && error.field === "project" ? error.message : null;
   return (
-    <Field id={id} label={label.project} error={message}>
+    <Field id={id} label={label.project} error={error}>
       <select
         id={id}
         value={projectId ?? ""}
         onChange={(e) => setProjectId(e.target.value ? Number(e.target.value) : null)}
-        aria-invalid={!!message}
+        aria-invalid={!!error}
       >
         <option value="">{label.noProject}</option>
         {projects

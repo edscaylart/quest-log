@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { useClients } from "@/hooks/clients/useClients";
+import { useFormAction } from "@/hooks/useFormAction";
 import { useLoad } from "@/hooks/useLoad";
 import { backUpNow, exportCsv, getDataInfo, inspectBackup, restoreBackup, revealDatabase } from "@/integrations/tauri/commands";
 import { pickFile, pickSavePath, saveBytes } from "@/integrations/tauri/files";
 import { loadSaved, presets, type Saved } from "@/lib/dashboard/savedPeriod";
-import { toCoreError } from "@/lib/errors";
 import { formatDate } from "@/lib/format";
 import { label } from "@/lib/labels";
 import { backupFileName, csvFileName, lastBackupText } from "@/lib/settings/dataFiles";
@@ -14,7 +14,7 @@ const databaseFile = { name: "Database", extension: "db" };
 
 export function DataSection() {
   const info = useLoad(getDataInfo, []).data;
-  const [error, setError] = useState<string | null>(null);
+  const { error, setError, run } = useFormAction();
   const [done, setDone] = useState<string | null>(null);
   const [restoring, setRestoring] = useState<{ path: string; date: string } | null>(null);
   const clients = useClients() ?? [];
@@ -22,15 +22,11 @@ export function DataSection() {
   const [{ preset, range }, setPeriod] = useState<Saved>(loadSaved);
   const [clientId, setClientId] = useState<number | null>(null);
 
-  async function attempt(action: () => Promise<void>) {
+  const attempt = (action: () => Promise<void>) => {
     setError(null);
     setDone(null);
-    try {
-      await action();
-    } catch (err) {
-      setError(toCoreError(err).message);
-    }
-  }
+    return run(action);
+  };
 
   const backUp = () =>
     attempt(async () => {
@@ -69,7 +65,7 @@ export function DataSection() {
           <p className="hint">{lastBackupText(info.lastBackup)}</p>
         </>
       )}
-      {error && <p className="error">{error}</p>}
+      {error && <p className="error">{error.message}</p>}
       <div className="actions">
         {done && (
           <p className="hint" role="status">

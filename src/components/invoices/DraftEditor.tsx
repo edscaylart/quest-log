@@ -6,7 +6,6 @@ import { Confirm } from "@/components/ui/Confirm";
 import { ErrorLine } from "@/components/ui/ErrorLine";
 import { Modal } from "@/components/ui/Modal";
 import { addInvoiceEntry, deleteInvoice, removeInvoiceEntry, sendInvoice, setInvoiceNetDays, setInvoiceTimesheet } from "@/integrations/tauri/commands";
-import { toCoreError } from "@/lib/errors";
 import { formatDay, formatSeconds } from "@/lib/format";
 import { entryLabel } from "@/lib/invoices/entryLabel";
 import type { Invoice } from "@/lib/invoices/types";
@@ -17,18 +16,17 @@ type Props = {
   invoice: Invoice;
   update: (action: Promise<Invoice>) => Promise<void>;
   error: string | null;
-  setError: (error: string | null) => void;
+  fail: (err: unknown) => void;
   onChange: () => void;
   onDeleted: () => void;
 };
 
-export function DraftEditor({ invoice, update, error, setError, onChange, onDeleted }: Props) {
+export function DraftEditor({ invoice, update, error, fail, onChange, onDeleted }: Props) {
   const id = invoice.id;
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState<TimeEntry | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [sending, setSending] = useState(false);
-  const fail = (err: unknown) => setError(toCoreError(err).message);
 
   return (
     <>

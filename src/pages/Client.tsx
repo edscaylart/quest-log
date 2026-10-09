@@ -6,10 +6,10 @@ import { ProjectList } from "@/components/projects/ProjectList";
 import { ProjectModal } from "@/components/projects/ProjectModal";
 import { RecentEntries } from "@/components/time-entries/RecentEntries";
 import { ErrorLine } from "@/components/ui/ErrorLine";
+import { useFormAction } from "@/hooks/useFormAction";
 import { useLoad } from "@/hooks/useLoad";
 import { clientDeletion, getClient, listProjects, listTimeEntries, setClientArchived } from "@/integrations/tauri/commands";
 import type { ClientDeletion } from "@/lib/clients/types";
-import { toCoreError } from "@/lib/errors";
 
 const RECENT = 10;
 
@@ -20,10 +20,9 @@ export function Client({ id, version, onChange, onDeleted }: { id: number; versi
   const [editing, setEditing] = useState(false);
   const [creatingProject, setCreatingProject] = useState(false);
   const [deleting, setDeleting] = useState<ClientDeletion | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const { error, fail } = useFormAction();
 
   if (!client) return null;
-  const fail = (err: unknown) => setError(toCoreError(err).message);
   const toggleArchived = () => setClientArchived(id, !client.archived).then(onChange, fail);
   const askDelete = () => clientDeletion(id).then(setDeleting, fail);
 
@@ -31,7 +30,7 @@ export function Client({ id, version, onChange, onDeleted }: { id: number; versi
     <>
       <h1>{client.name}</h1>
       <ClientDetails client={client} onEdit={() => setEditing(true)} onToggleArchived={toggleArchived} onDelete={askDelete} />
-      <ErrorLine error={error} />
+      <ErrorLine error={error?.message ?? null} />
 
       <ProjectList projects={projects} onNew={client.archived ? null : () => setCreatingProject(true)} />
 
