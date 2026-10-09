@@ -5,9 +5,9 @@ import { useClients } from "@/hooks/clients/useClients";
 import { useFormAction } from "@/hooks/useFormAction";
 import { useLoad } from "@/hooks/useLoad";
 import { createDraft, draftCandidates } from "@/integrations/tauri/commands";
-import { formatRange } from "@/lib/format";
+import { formatRange, pluralise } from "@/lib/format";
 import { entryLabel } from "@/lib/invoices/entryLabel";
-import { periodInput, type PeriodChoice } from "@/lib/invoices/periodInput";
+import { draftPeriodInput, type PeriodChoice } from "@/lib/invoices/periodInput";
 import type { DraftCandidates } from "@/lib/invoices/types";
 import { label } from "@/lib/labels";
 
@@ -28,7 +28,7 @@ export function NewDraftModal({ onClose, onCreated }: { onClose: () => void; onC
 
   const custom = choice.kind === "custom" ? choice : null;
   const { data: candidates, error: loadError } = useLoad(
-    () => (clientId ? draftCandidates(clientId, periodInput(choice)) : null),
+    () => (clientId ? draftCandidates(clientId, draftPeriodInput(choice)) : null),
     [clientId, choice.kind, custom?.start, custom?.end],
   );
   // A failed create shows until a newer load replaces the candidates it was for.
@@ -98,7 +98,7 @@ export function NewDraftModal({ onClose, onCreated }: { onClose: () => void; onC
           {candidates && candidates.older > 0 && candidates.olderSince && period && (
             <p className="hint">
               <button type="button" className="link" onClick={() => setChoice({ kind: "custom", start: candidates.olderSince!, end: period.end })}>
-                {candidates.older} older uninvoiced {candidates.older === 1 ? "entry" : "entries"} — include?
+                {candidates.older} older uninvoiced {pluralise(candidates.older, "entry", "entries")} — include?
               </button>
             </p>
           )}

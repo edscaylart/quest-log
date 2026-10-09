@@ -6,7 +6,7 @@ import { Confirm } from "@/components/ui/Confirm";
 import { ErrorLine } from "@/components/ui/ErrorLine";
 import { Modal } from "@/components/ui/Modal";
 import { addInvoiceEntry, deleteInvoice, removeInvoiceEntry, sendInvoice, setInvoiceNetDays, setInvoiceTimesheet } from "@/integrations/tauri/commands";
-import { formatDay, formatSeconds } from "@/lib/format";
+import { entryDescription, formatDay, formatSeconds, pluralise } from "@/lib/format";
 import { entryLabel } from "@/lib/invoices/entryLabel";
 import type { Invoice } from "@/lib/invoices/types";
 import { label } from "@/lib/labels";
@@ -58,7 +58,7 @@ export function DraftEditor({ invoice, update, error, fail, onChange, onDeleted 
       </div>
       {invoice.newInPeriod > 0 && (
         <p className="hint">
-          {invoice.newInPeriod} new uninvoiced {invoice.newInPeriod === 1 ? "entry" : "entries"} in this period
+          {invoice.newInPeriod} new uninvoiced {pluralise(invoice.newInPeriod, "entry", "entries")} in this period
         </p>
       )}
       <ErrorLine error={error} />
@@ -76,7 +76,7 @@ export function DraftEditor({ invoice, update, error, fail, onChange, onDeleted 
             <li key={e.id} className="row entry">
               <button onClick={() => setEditing(e)}>
                 <span className="who">{formatDay(e.date)}</span>
-                <span className="note">{[e.projectName, e.note].filter(Boolean).join(" · ")}</span>
+                <span className="note">{entryDescription(e)}</span>
                 <span className="num">{formatSeconds(e.seconds)}</span>
               </button>
               <button className="ghost icon" aria-label={`Remove ${e.note ?? formatDay(e.date)}`} onClick={() => update(removeInvoiceEntry(id, e.id))}>

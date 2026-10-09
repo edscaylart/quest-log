@@ -6,7 +6,7 @@ import { ErrorLine } from "@/components/ui/ErrorLine";
 import { Field } from "@/components/ui/Field";
 import { markPaid, unmarkPaid, unsealInvoice } from "@/integrations/tauri/commands";
 import { toCoreError, type CoreError } from "@/lib/errors";
-import { formatDay, formatMonthDay, formatSeconds, localDate } from "@/lib/format";
+import { entryDescription, formatDay, formatMonthDay, formatSeconds, localDate } from "@/lib/format";
 import type { Invoice } from "@/lib/invoices/types";
 import { label } from "@/lib/labels";
 
@@ -88,7 +88,7 @@ export function SealedDetail({ invoice, update, error, setError, fail }: Props) 
           {invoice.entries.map((e) => (
             <li key={e.id} className="row">
               <span className="who">{formatDay(e.date)}</span>
-              <span className="note">{[e.projectName, e.note].filter(Boolean).join(" · ")}</span>
+              <span className="note">{entryDescription(e)}</span>
               <span className="num">{formatSeconds(e.seconds)}</span>
             </li>
           ))}

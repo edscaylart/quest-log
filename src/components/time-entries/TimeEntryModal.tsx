@@ -13,6 +13,7 @@ import {
   lastUsed,
   updateTimeEntry,
 } from "@/integrations/tauri/commands";
+import { clientChange } from "@/lib/clients/clientChange";
 import { clientAndProject, formatDay, formatSeconds, localDate, localTime } from "@/lib/format";
 import { label } from "@/lib/labels";
 import { editableDuration } from "@/lib/time-entries/editableDuration";
@@ -115,10 +116,7 @@ export function TimeEntryModal({
             <select
               id="entry-client"
               value={clientId}
-              onChange={(e) => {
-                setClientId(Number(e.target.value));
-                setProjectId(null);
-              }}
+              onChange={clientChange(setClientId, setProjectId)}
               aria-invalid={!!fieldError("client")}
             >
               {clients?.map((c) => (

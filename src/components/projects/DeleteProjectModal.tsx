@@ -1,6 +1,6 @@
 import { Modal } from "@/components/ui/Modal";
 import { deleteProject } from "@/integrations/tauri/commands";
-import { formatHours } from "@/lib/format";
+import { formatHours, pluralise, totalSeconds } from "@/lib/format";
 import { label } from "@/lib/labels";
 import type { Project } from "@/lib/projects/types";
 import type { TimeEntry } from "@/lib/time-entries/types";
@@ -23,7 +23,7 @@ export function DeleteProjectModal({
       <p>
         {project.name}
         {entries.length > 0 &&
-          `: ${entries.length} time ${entries.length === 1 ? "entry" : "entries"} and ${formatHours(entries.reduce((sum, e) => sum + e.seconds, 0))} hours go with it`}
+          `: ${entries.length} ${pluralise(entries.length, "time entry", "time entries")} and ${formatHours(totalSeconds(entries))} hours go with it`}
         . This can't be undone.
       </p>
       <div className="actions">

@@ -4,6 +4,7 @@ import { Field } from "@/components/ui/Field";
 import { Modal } from "@/components/ui/Modal";
 import { useRateEdit } from "@/hooks/projects/useRateEdit";
 import { createProject, previewProjectRate, updateProject } from "@/integrations/tauri/commands";
+import { rateInput } from "@/lib/format";
 import { label } from "@/lib/labels";
 import type { Project } from "@/lib/projects/types";
 
@@ -19,7 +20,7 @@ export function ProjectModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
-  const initialRate = project?.rateCents == null ? "" : (project.rateCents / 100).toFixed(2);
+  const initialRate = project?.rateCents == null ? "" : rateInput(project.rateCents);
   const [name, setName] = useState(project?.name ?? "");
   const [rate, setRate] = useState(initialRate);
   const { error, busy, fieldError, submit, repricing, confirm, cancel } = useRateEdit(async () => {

@@ -2,6 +2,7 @@ import { useEffect, useReducer, useState } from "react";
 import { useLoad } from "@/hooks/useLoad";
 import { getDashboard } from "@/integrations/tauri/commands";
 import { REFRESH_MS } from "@/lib/dashboard/constants";
+import { periodInput } from "@/lib/dashboard/periodInput";
 import { loadSaved, save, type Saved } from "@/lib/dashboard/savedPeriod";
 
 /** The saved Period choice, its step offset, and the Dashboard for it, refreshed every minute. */
@@ -23,7 +24,7 @@ export function useDashboard(version: number) {
   }, []);
 
   const { data, error } = useLoad(
-    () => getDashboard({ preset, offset, start: range?.start ?? null, end: range?.end ?? null }),
+    () => getDashboard(periodInput(preset, offset, range)),
     [preset, range?.start, range?.end, offset, version, tick],
   );
 

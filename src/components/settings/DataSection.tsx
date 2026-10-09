@@ -5,6 +5,7 @@ import { useFormAction } from "@/hooks/useFormAction";
 import { useLoad } from "@/hooks/useLoad";
 import { backUpNow, exportCsv, getDataInfo, inspectBackup, restoreBackup, revealDatabase } from "@/integrations/tauri/commands";
 import { pickFile, pickSavePath, saveBytes } from "@/integrations/tauri/files";
+import { periodInput } from "@/lib/dashboard/periodInput";
 import { loadSaved, presets, type Saved } from "@/lib/dashboard/savedPeriod";
 import { formatDate } from "@/lib/format";
 import { label } from "@/lib/labels";
@@ -39,7 +40,7 @@ export function DataSection() {
   const exportEntries = () =>
     attempt(async () => {
       const saved = await saveBytes(csvFileName(new Date()), { name: "CSV", extension: "csv" }, async () =>
-        new TextEncoder().encode(await exportCsv({ preset, offset: 0, start: range?.start ?? null, end: range?.end ?? null }, clientId)),
+        new TextEncoder().encode(await exportCsv(periodInput(preset, 0, range), clientId)),
       );
       if (saved) setDone("Exported");
     });

@@ -5,10 +5,11 @@ import { Modal } from "@/components/ui/Modal";
 import { useRateEdit } from "@/hooks/projects/useRateEdit";
 import { previewClientRate, updateClient } from "@/integrations/tauri/commands";
 import type { Client, ClientEdit } from "@/lib/clients/types";
+import { rateInput } from "@/lib/format";
 import { label } from "@/lib/labels";
 
 export function EditClientModal({ client, onClose, onSaved }: { client: Client; onClose: () => void; onSaved: () => void }) {
-  const initialRate = (client.rateCents / 100).toFixed(2);
+  const initialRate = rateInput(client.rateCents);
   const [form, setForm] = useState<ClientEdit>({
     name: client.name,
     rate: initialRate,

@@ -1,4 +1,4 @@
-import { clientAndProject, formatDay, formatSeconds } from "@/lib/format";
+import { clientAndProject, formatDay, formatSeconds, totalSeconds } from "@/lib/format";
 import { label } from "@/lib/labels";
 import { byDay } from "@/lib/time-entries/byDay";
 import type { TimeEntry } from "@/lib/time-entries/types";
@@ -17,7 +17,7 @@ export function DayList({
     <section key={date} className="day" aria-label={formatDay(date)}>
       <h2>
         <span>{formatDay(date)}</span>
-        <span className="num">{formatSeconds(dayEntries.reduce((sum, e) => sum + e.seconds, 0))}</span>
+        <span className="num">{formatSeconds(totalSeconds(dayEntries))}</span>
       </h2>
       <ul className="rows">
         {dayEntries.map((e) => (

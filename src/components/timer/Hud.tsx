@@ -10,6 +10,7 @@ import { useFormAction } from "@/hooks/useFormAction";
 import { useLoad } from "@/hooks/useLoad";
 import { discardTimer, lastUsed, startTimer, stopTimer, updateTimer } from "@/integrations/tauri/commands";
 import { onTrayStart } from "@/integrations/tauri/events";
+import { clientChange } from "@/lib/clients/clientChange";
 import type { Client } from "@/lib/clients/types";
 import { clientAndProject, formatClock } from "@/lib/format";
 import { label } from "@/lib/labels";
@@ -233,10 +234,7 @@ function ClientField({
   return (
     <Field id="timer-client" label={label.client} error={error}>
       <select id="timer-client" value={clientId} 
-        onChange={(e) => {
-          setClientId(Number(e.target.value));
-          setProjectId(null);
-        }}
+        onChange={clientChange(setClientId, setProjectId)}
         aria-invalid={!!error}
       >
         {clients.map((c) => (

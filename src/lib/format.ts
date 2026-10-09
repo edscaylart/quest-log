@@ -55,3 +55,15 @@ export const clientAndProject = (x: { clientName: string; projectName: string | 
 export function formatDate(date: string) {
   return day(date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
+
+/** The word for `n` of a thing: "entry" for 1, "entries" otherwise. */
+export const pluralise = (n: number, one: string, many: string) => (n === 1 ? one : many);
+
+/** "Website · Fixed the header": a time entry's Project and note, whichever it has. */
+export const entryDescription = (e: { projectName: string | null; note: string | null }) => [e.projectName, e.note].filter(Boolean).join(" · ");
+
+/** The tracked seconds of all these time entries. */
+export const totalSeconds = (entries: { seconds: number }[]) => entries.reduce((sum, e) => sum + e.seconds, 0);
+
+/** 12550 → "125.50": a Rate in cents as its form input holds it. */
+export const rateInput = (cents: number) => (cents / 100).toFixed(2);
