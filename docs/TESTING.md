@@ -4,7 +4,7 @@ Both sides test behaviour through their public seam: the Rust core through its f
 
 ## Running the tests
 
-Frontend commands run from the repo root; Rust commands from `src-tauri/`. CI (`.github/workflows/ci.yml`) runs all of these on every push.
+Frontend commands run from the repo root; Rust commands from `src-tauri/`. CI (`.github/workflows/ci.yml`) runs `pnpm build` (which typechecks), `pnpm test`, `cargo clippy` and `cargo test` on pull requests and on pushes to `main`.
 
 | Task | Command |
 |---|---|
@@ -25,7 +25,7 @@ Integration tests live in `src-tauri/tests/`, one file per area, and call `quest
 The shared test module is `src-tauri/tests/common/mod.rs`:
 
 - **`Fixture::new()`** opens a fresh `quest-log.db` in a `tempfile` temp dir with every migration applied, so each test gets its own real SQLite database. The dir is deleted when the fixture drops.
-- **`FakeClock`** implements the core's `Clock` trait. It starts at 2026-10-07 09:00 UTC, in a fixed UTC−3 zone (no DST), and tests move it with `set` and `now_plus_minutes`. Pass `&fx.clock` wherever the core takes a `&dyn Clock`.
+- **`FakeClock`** implements the core's `Clock` trait. It starts at 2026-10-07 09:00 UTC, in a fixed UTC−3 zone (no DST), and tests move it with `set` (`now_plus_minutes` gives a time relative to now without moving it). Pass `&fx.clock` wherever the core takes a `&dyn Clock`.
 - **`Fixture::restart()`** closes the database and reopens it, as an app restart would.
 
 Tests are `#[tokio::test]` async functions named as sentences (`a_sent_invoice_is_overdue_only_after_its_due_date`). `src-tauri/src/tray.rs` has the only in-crate unit tests: the tray title and menu for idle and running Timers.
@@ -34,7 +34,7 @@ Tests are `#[tokio::test]` async functions named as sentences (`a_sent_invoice_i
 
 Vitest with jsdom, configured in `vite.config.ts`; `src/tests/support/setup.ts` adds the jest-dom matchers and clears the DOM and Tauri mocks after each test.
 
-- **IPC rendering.** `renderWithIpc(<App />, commands)` in `src/tests/support/render.tsx` renders with `mockIPC` from `@tauri-apps/api/mocks`. `commands` maps a Rust command name to a handler that stands in for the core; a handler that throws rejects like a core error does, and an unmocked command fails the test. It returns `user` (user-event) and `calls`, the commands invoked with their arguments. `progress` and `acknowledge_level_up` default to Lv 1; `emptyDashboard` is a stock `dashboard` handler.
+- **IPC rendering.** `renderWithIpc(<App />, commands)` in `src/tests/support/render.tsx` renders with `mockIPC` from `@tauri-apps/api/mocks`. `commands` maps a Rust command name to a handler that stands in for the core; a handler that throws rejects like a core error does, and an unmocked command rejects with `unmocked command: <name>`. It returns `user` (user-event) and `calls`, the commands invoked with their arguments. `progress` and `acknowledge_level_up` default to Level 1 with no level-up; `emptyDashboard` is a stock `dashboard` handler.
 - **Events.** `renderWithIpc` mocks events too, so `emit("timer-changed", …)` (re-exported from `render.tsx`) fires an event as the tray would.
 - **Plugins.** The dialog and fs plugins are plugin commands over the same IPC, so tests mock them by name in `commands` (for example `plugin:dialog|save`, `plugin:fs|write_file`).
 - **PDF.** `src/tests/invoice-pdf.test.tsx` runs in the node environment (`// @vitest-environment node`) because jsdom's typed arrays garble react-pdf's compressed streams. It renders the invoice and reads its text back with `pdfPages` (`src/tests/support/pdf.ts`, pdfjs-dist).

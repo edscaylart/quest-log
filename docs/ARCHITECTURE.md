@@ -29,10 +29,10 @@ Quest Log is a [Tauri 2](https://tauri.app) app: a React + TypeScript frontend i
 
 | Layer | What lives there |
 |---|---|
-| `main.tsx`, `App.tsx` | Entry point and shell. `App` owns the four tabs (Home, Log, Clients, Invoices), each tab's push stack (`hooks/useNav.ts`), keyboard shortcuts, the HUD, the level-up banner, and the `timer-changed` / `tray-error` listeners. |
+| `main.tsx`, `App.tsx` | Entry point and shell. `App` owns the four tabs (Home, Log, Clients, Invoices), each tab's push stack (pages push through the `Nav` context in `hooks/useNav.ts`), keyboard shortcuts, the HUD, the level-up banner, and the `timer-changed` / `tray-error` listeners. |
 | `pages/` | One per screen: `Home`, `Log`, `Invoices`, `Invoice`, `Clients`, `Client`, `Project`, `Settings`. Each loads its data and lays out components. Only `App` imports pages. |
 | `components/<domain>/` | The UI pieces of each domain: `clients`, `projects`, `time-entries`, `timer` (the HUD), `invoices`, `dashboard`, `progress`, `settings`, plus `ui` (Modal, Field, Confirm, ErrorLine). Components call the command wrappers directly for one-off mutations. |
-| `hooks/` | Shared state logic. Top level: `useLoad` (one IPC load with loading/error), `useFormAction` (a submit with busy/error), `useNav` (push stacks). Per domain: `clients/useClients` (the only way a Client list loads), `dashboard/useDashboard` (the Home period, saved and auto-refreshed), `projects/useRateEdit` (Client and Project Rate repricing), `timer/useElapsed` (the live Timer clock). |
+| `hooks/` | Shared state logic. Top level: `useLoad` (one IPC load with loading/error), `useFormAction` (a submit with busy/error), `useNav` (push a screen onto the current tab's stack). Per domain: `clients/useClients` (the only way a Client list loads), `dashboard/useDashboard` (the Home period, saved and auto-refreshed), `projects/useRateEdit` (Client and Project Rate repricing), `timer/useElapsed` (the live Timer clock). |
 | `lib/<domain>/` | Pure logic and the domain types mirroring the Rust structs. Top level: `format` (money, hours, dates), `errors` (`CoreError` decoding), `labels` (the RPG labels). |
 | `integrations/` | The only home of third-party SDKs. `tauri/commands.ts`: one wrapper per Rust command. `tauri/events.ts`: `onTimerChanged`, `onTrayError`, `onTrayStart`. `tauri/files.ts`: open/save panels and file writes. `pdf/invoicePdf.tsx`: renders and saves the invoice PDF. |
 | `styles/` | `global.css` and the bundled IBM Plex Mono font. |
@@ -40,9 +40,9 @@ Quest Log is a [Tauri 2](https://tauri.app) app: a React + TypeScript frontend i
 
 ### Tauri bridge
 
-- **Commands** (frontend → core): `src-tauri/src/lib.rs` registers 50 `#[tauri::command]` functions, each a thin wrapper over one core function with no logic. Each has a twin in `src/integrations/tauri/commands.ts` (`create_client` ↔ `createClient`). A failing command rejects with the serialized `CoreError`, which `lib/errors.ts` decodes.
+- **Commands** (frontend → core): `src-tauri/src/lib.rs` registers 50 `#[tauri::command]` functions, each a thin wrapper over one core function. The exceptions: `data_info` returns the database path and last backup held in app state, and `restore_backup` restarts the app once the database is swapped. Each has a twin in `src/integrations/tauri/commands.ts` (`create_client` ↔ `createClient`). A failing command rejects with the serialized `CoreError`, which `lib/errors.ts` decodes.
 - **Events** (core → frontend), all emitted by the tray:
-  - `timer-changed`: the tray started, stopped or discarded the Timer; payload is what a stop did, or null. `App` refreshes and may show the level-up or overlong prompt.
+  - `timer-changed`: the tray started, stopped or discarded the Timer; payload is what a stop did, or null. `App` refreshes and may show the level-up banner, or the entry editor when a stopped Timer ran past 24 hours.
   - `tray-error`: a tray action failed; the window is shown and `App` displays the error.
   - `tray-start`: the tray's Start needs a client picked; the HUD opens its start form.
 - **Plugins**: dialog (panels, update dialogs), fs (the frontend may only write files), updater (release builds check GitHub Releases on launch). Permissions are in `src-tauri/capabilities/default.json`; versions and roles in [TECH_STACK.md](TECH_STACK.md).
@@ -77,7 +77,7 @@ One file, `quest-log.db`, in the app data directory, with `backups/` beside it. 
 Why this layout: [ADR 0002](adr/0002-frontend-layout.md).
 
 - A file's kind picks its top-level folder (`pages`, `components`, `hooks`, `lib`, `integrations`, `styles`, `tests`); its domain picks the subfolder.
-- Domain subfolders use the canonical glossary terms, matching the Rust `core` modules: `clients`, `projects`, `time-entries`, `timer`, `invoices`, `dashboard`, `progress`, `settings`, plus `backups` in `lib`. Never the RPG labels. `components/ui` holds shared primitives.
+- Domain subfolders use the canonical glossary terms, matching the Rust `core` modules: `clients`, `projects`, `time-entries`, `timer`, `invoices`, `dashboard`, `progress`, `settings`, `backups`. A domain gets a subfolder in a kind only when it has files there (`backups` only in `lib`; `export` has none). Never the RPG labels. `components/ui` holds shared primitives.
 - Code used by every domain sits at the top of its kind folder (`hooks/useLoad.ts`, `lib/format.ts`).
 - One exported component per file. A private helper component stays in its file until a second file needs it, then moves to its own file.
 - Naming: PascalCase for components and pages, `useThing` for hooks, camelCase for other modules, kebab-case for domain folders and test files.
@@ -87,7 +87,7 @@ Why this layout: [ADR 0002](adr/0002-frontend-layout.md).
 
 ## Import rules
 
-Imports point one way, down the map:
+Imports point one way, down the map. These are the current rules; they extend [ADR 0002](adr/0002-frontend-layout.md), which let hooks import only `integrations` and `lib` and components only the command wrappers:
 
 - `lib` is pure and imports nothing from the app except other `lib` modules.
 - `integrations` import only `lib` and other `integrations` (the PDF save uses `tauri/files.ts`).
