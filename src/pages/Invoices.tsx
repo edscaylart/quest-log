@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { InvoiceList } from "@/components/invoices/InvoiceList";
 import { NewDraftModal } from "@/components/invoices/NewDraftModal";
+import { ErrorLine } from "@/components/ui/ErrorLine";
 import { useLoad } from "@/hooks/useLoad";
 import { useNav } from "@/hooks/useNav";
 import { listInvoices } from "@/integrations/tauri/commands";
@@ -9,7 +10,7 @@ import { label } from "@/lib/labels";
 export function Invoices({ version, onChange }: { version: number; onChange: () => void }) {
   const [creating, setCreating] = useState(false);
   const { push } = useNav();
-  const invoices = useLoad(listInvoices, [version]).data;
+  const { data: invoices, error } = useLoad(listInvoices, [version]);
 
   return (
     <>
@@ -17,6 +18,7 @@ export function Invoices({ version, onChange }: { version: number; onChange: () 
       <button className="primary" onClick={() => setCreating(true)}>
         + New {label.invoice}
       </button>
+      <ErrorLine error={error} />
       {invoices?.length === 0 && <p className="hint">No {label.invoices} yet.</p>}
       <InvoiceList invoices={invoices ?? []} />
       {creating && (

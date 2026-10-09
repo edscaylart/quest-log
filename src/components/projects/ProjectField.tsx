@@ -23,10 +23,12 @@ export function ProjectField({
   /** The invalid-project message, if any. */
   error: string | null;
 }) {
-  const projects = useLoad(() => (clientId ? listProjects(clientId) : null), [clientId]).data ?? [];
+  const { data, error: loadError } = useLoad(() => (clientId ? listProjects(clientId) : null), [clientId]);
+  const projects = data ?? [];
+  const fieldError = error ?? loadError;
 
   return (
-    <Field id={id} label={label.project} error={error}>
+    <Field id={id} label={label.project} error={fieldError}>
       <select
         id={id}
         value={projectId ?? ""}

@@ -59,6 +59,7 @@ Vitest with jsdom, configured in `vite.config.ts`; `src/tests/support/setup.ts` 
 | Settings | `tests/settings.rs` | `tests/settings.test.tsx` |
 | Backups and restore | `tests/backups.rs` | `tests/settings.test.tsx` |
 | CSV export | `tests/export.rs` | `tests/settings.test.tsx` |
+| Load errors shown on every screen | — | `tests/load-errors.test.tsx` |
 | Formatting helpers | — | `lib/format.test.ts` |
 | Import boundaries | — | `tests/sdk-boundary.test.ts`, `tests/clients-boundary.test.ts` |
 | Test helpers | `tests/common/mod.rs` | `tests/support/render.tsx`, `tests/support/setup.ts`, `tests/support/pdf.ts` |

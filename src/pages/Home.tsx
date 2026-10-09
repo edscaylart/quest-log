@@ -5,6 +5,7 @@ import { Chart } from "@/components/dashboard/Chart";
 import { ClientTable } from "@/components/dashboard/ClientTable";
 import { FiguresList } from "@/components/dashboard/FiguresList";
 import { PeriodControls } from "@/components/dashboard/PeriodControls";
+import { ErrorLine } from "@/components/ui/ErrorLine";
 import { useClients } from "@/hooks/clients/useClients";
 import { useDashboard } from "@/hooks/dashboard/useDashboard";
 import { label } from "@/lib/labels";
@@ -13,9 +14,15 @@ export function Home({ version, onChange }: { version: number; onChange: () => v
   const [creating, setCreating] = useState(false);
   const { saved, choose, offset, setOffset, data, error } = useDashboard(version);
 
-  const clients = useClients(undefined, [version]);
+  const { clients, error: clientsError } = useClients(undefined, [version]);
 
-  if (!clients) return <h1>Home</h1>;
+  if (!clients)
+    return (
+      <>
+        <h1>Home</h1>
+        <ErrorLine error={clientsError} />
+      </>
+    );
   if (clients.length === 0)
     return (
       <>
@@ -40,7 +47,7 @@ export function Home({ version, onChange }: { version: number; onChange: () => v
       <h1>Home</h1>
       {data && <AllTimeStrip allTime={data.allTime} />}
       <PeriodControls saved={saved} period={data?.period} offset={offset} setOffset={setOffset} choose={choose} />
-      {error && <p className="error">{error}</p>}
+      <ErrorLine error={clientsError ?? error} />
 
       {data && (
         <>

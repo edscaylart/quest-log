@@ -2,6 +2,7 @@ import { useState } from "react";
 import { DayList } from "@/components/time-entries/DayList";
 import { LogToolbar } from "@/components/time-entries/LogToolbar";
 import { TimeEntryModal } from "@/components/time-entries/TimeEntryModal";
+import { ErrorLine } from "@/components/ui/ErrorLine";
 import { useClients } from "@/hooks/clients/useClients";
 import { useLoad } from "@/hooks/useLoad";
 import { listTimeEntries } from "@/integrations/tauri/commands";
@@ -27,8 +28,8 @@ export function Log({
 }) {
   const [clientId, setClientId] = useState<number | null>(null);
   const [editing, setEditing] = useState<TimeEntry | null>(null);
-  const clients = useClients() ?? [];
-  const entries = useLoad(() => listTimeEntries(clientId), [clientId, version]).data;
+  const { clients, error: clientsError } = useClients();
+  const { data: entries, error } = useLoad(() => listTimeEntries(clientId), [clientId, version]);
 
   const close = () => {
     setCreating(false);
@@ -42,7 +43,8 @@ export function Log({
   return (
     <>
       <h1>Log</h1>
-      <LogToolbar clients={clients} clientId={clientId} setClientId={setClientId} onNew={() => setCreating(true)} />
+      <ErrorLine error={clientsError ?? error} />
+      <LogToolbar clients={clients ?? []} clientId={clientId} setClientId={setClientId} onNew={() => setCreating(true)} />
       {entries?.length === 0 && <p className="hint">No time logged yet.</p>}
       <DayList entries={entries ?? []} onEdit={setEditing} onResume={onResume} />
       {(creating || editing) && <TimeEntryModal key={editing?.id ?? "new"} entry={editing} onClose={close} onSaved={saved} />}

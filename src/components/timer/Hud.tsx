@@ -42,7 +42,8 @@ export function Hud({
   onError: (err: unknown) => void;
   onSettings: () => void;
 }) {
-  const allClients = useClients(undefined, [version]) ?? [];
+  const { clients: loaded, error: clientsError } = useClients(undefined, [version]);
+  const allClients = loaded ?? [];
   // Retired clients take no new Timers; a running one keeps its own.
   const clients = allClients.filter((c) => !c.archived);
   const [starting, setStarting] = useState(false);
@@ -76,7 +77,7 @@ export function Hud({
           ▶ Start
         </button>
       )}
-      <ErrorLine error={error} />
+      <ErrorLine error={error ?? clientsError} />
       <div className="level">
         {progress && <Level progress={progress} />}
         <button className="ghost icon" aria-label="Settings" onClick={onSettings}>
@@ -135,7 +136,8 @@ function StartModal({ clients, onClose, onStarted }: { clients: Client[]; onClos
   const [projectId, setProjectId] = useState<number | null>(null);
   const { error, fail, fieldError } = useFormAction();
 
-  // Seeds the form once from the last-used client and project.
+  // Seeds the form once from the last-used client and project. A failed load is
+  // silent on purpose: the form works without its defaults.
   useLoad(
     () =>
       lastUsed().then((last) => {
