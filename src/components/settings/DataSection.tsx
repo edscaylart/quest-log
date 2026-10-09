@@ -1,9 +1,8 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Modal } from "@/components/ui/Modal";
+import { useLoad } from "@/hooks/useLoad";
 import { backUpNow, exportCsv, getDataInfo, inspectBackup, listClients, restoreBackup, revealDatabase } from "@/integrations/tauri/commands";
 import { pickFile, pickSavePath, saveBytes } from "@/integrations/tauri/files";
-import type { DataInfo } from "@/lib/backups/types";
-import type { Client } from "@/lib/clients/types";
 import { loadSaved, presets, type Saved } from "@/lib/dashboard/savedPeriod";
 import { toCoreError } from "@/lib/errors";
 import { formatDate } from "@/lib/format";
@@ -13,19 +12,14 @@ import { backupFileName, csvFileName, lastBackupText } from "@/lib/settings/data
 const databaseFile = { name: "Database", extension: "db" };
 
 export function DataSection() {
-  const [info, setInfo] = useState<DataInfo | null>(null);
+  const info = useLoad(getDataInfo, []).data;
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
   const [restoring, setRestoring] = useState<{ path: string; date: string } | null>(null);
-  const [clients, setClients] = useState<Client[]>([]);
+  const clients = useLoad(listClients, []).data ?? [];
   // The Dashboard's period at offset 0; Custom starts on the days it last showed.
   const [{ preset, range }, setPeriod] = useState<Saved>(loadSaved);
   const [clientId, setClientId] = useState<number | null>(null);
-
-  useEffect(() => {
-    getDataInfo().then(setInfo);
-    listClients().then(setClients);
-  }, []);
 
   async function attempt(action: () => Promise<void>) {
     setError(null);

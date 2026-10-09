@@ -1,7 +1,8 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { ProjectField } from "@/components/projects/ProjectField";
 import { Field } from "@/components/ui/Field";
 import { Modal } from "@/components/ui/Modal";
+import { useLoad } from "@/hooks/useLoad";
 import {
   createTimeEntry,
   deleteTimeEntry,
@@ -11,7 +12,6 @@ import {
   listClients,
   updateTimeEntry,
 } from "@/integrations/tauri/commands";
-import type { Client } from "@/lib/clients/types";
 import { toCoreError, type CoreError } from "@/lib/errors";
 import { clientAndProject, formatDay, formatSeconds, localDate, localTime } from "@/lib/format";
 import { label } from "@/lib/labels";
@@ -33,7 +33,6 @@ export function TimeEntryModal({
 }) {
   const initial = entry ?? overlong;
   const locked = !!entry?.locked;
-  const [clients, setClients] = useState<Client[] | null>(null);
   const [clientId, setClientId] = useState(initial?.clientId ?? 0);
   const [projectId, setProjectId] = useState(initial?.projectId ?? null);
   const [date, setDate] = useState(initial?.date ?? localDate(new Date()));
@@ -46,17 +45,20 @@ export function TimeEntryModal({
   const [busy, setBusy] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
 
-  useEffect(() => {
-    Promise.all([listClients(), initial ? null : lastUsed()]).then(([all, last]) => {
-      // Retired clients take no new entries; an entry keeps its own.
-      const list = all.filter((c) => !c.archived || c.id === initial?.clientId);
-      setClients(list);
-      if (initial) return;
-      const known = list.some((c) => c.id === last?.clientId);
-      setClientId(known ? last!.clientId : (list[0]?.id ?? 0));
-      setProjectId(known ? last!.projectId : null);
-    });
-  }, [initial]);
+  const clients = useLoad(
+    () =>
+      Promise.all([listClients(), initial ? null : lastUsed()]).then(([all, last]) => {
+        // Retired clients take no new entries; an entry keeps its own.
+        const list = all.filter((c) => !c.archived || c.id === initial?.clientId);
+        if (initial) return list;
+        // A new entry seeds its form once.
+        const known = list.some((c) => c.id === last?.clientId);
+        setClientId(known ? last!.clientId : (list[0]?.id ?? 0));
+        setProjectId(known ? last!.projectId : null);
+        return list;
+      }),
+    [initial],
+  ).data;
 
   const fieldError = (field: string) => (error?.kind === "invalid" && error.field === field ? error.message : null);
 

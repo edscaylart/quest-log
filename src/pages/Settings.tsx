@@ -1,15 +1,10 @@
-import { useEffect, useState } from "react";
 import { DataSection } from "@/components/settings/DataSection";
 import { SettingsForm } from "@/components/settings/SettingsForm";
+import { useLoad } from "@/hooks/useLoad";
 import { getSettings } from "@/integrations/tauri/commands";
-import type { Settings as SettingsRecord } from "@/lib/settings/types";
 
 export function Settings() {
-  const [settings, setSettings] = useState<SettingsRecord | null>(null);
-
-  useEffect(() => {
-    getSettings().then(setSettings);
-  }, []);
+  const settings = useLoad(getSettings, []).data;
 
   if (!settings) return null;
   return (

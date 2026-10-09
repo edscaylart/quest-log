@@ -5,6 +5,7 @@ import { ErrorLine } from "@/components/ui/ErrorLine";
 import { Field } from "@/components/ui/Field";
 import { Modal } from "@/components/ui/Modal";
 import { useElapsed } from "@/hooks/timer/useElapsed";
+import { useLoad } from "@/hooks/useLoad";
 import { discardTimer, lastUsed, listClients, startTimer, stopTimer, updateTimer } from "@/integrations/tauri/commands";
 import { onTrayStart } from "@/integrations/tauri/events";
 import type { Client } from "@/lib/clients/types";
@@ -39,15 +40,11 @@ export function Hud({
   onError: (err: unknown) => void;
   onSettings: () => void;
 }) {
-  const [allClients, setClients] = useState<Client[]>([]);
+  const allClients = useLoad(listClients, [version]).data ?? [];
   // Retired clients take no new Timers; a running one keeps its own.
   const clients = allClients.filter((c) => !c.archived);
   const [starting, setStarting] = useState(false);
   const [editing, setEditing] = useState(false);
-
-  useEffect(() => {
-    listClients().then(setClients);
-  }, [version]);
 
   const stop = () => stopTimer().then(onStopped, onError);
 
@@ -136,13 +133,16 @@ function StartModal({ clients, onClose, onStarted }: { clients: Client[]; onClos
   const [projectId, setProjectId] = useState<number | null>(null);
   const [error, setError] = useState<CoreError | null>(null);
 
-  useEffect(() => {
-    lastUsed().then((last) => {
-      if (!last || !clients.some((c) => c.id === last.clientId)) return;
-      setClientId(last.clientId);
-      setProjectId(last.projectId);
-    });
-  }, []);
+  // Seeds the form once from the last-used client and project.
+  useLoad(
+    () =>
+      lastUsed().then((last) => {
+        if (!last || !clients.some((c) => c.id === last.clientId)) return;
+        setClientId(last.clientId);
+        setProjectId(last.projectId);
+      }),
+    [],
+  );
 
   function submit(e: FormEvent) {
     e.preventDefault();

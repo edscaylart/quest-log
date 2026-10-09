@@ -1,4 +1,4 @@
-import { screen, within } from "@testing-library/react";
+import { act, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import App from "@/App";
 import type { Client } from "@/lib/clients/types";
@@ -127,6 +127,16 @@ describe("Home", () => {
 
     await user.click(screen.getByRole("button", { name: "Next period" }));
     await vi.waitFor(() => expect(lastInput(calls)).toEqual({ preset: "custom", offset: 1, start: "2026-10-01", end: "2026-10-11" }));
+  });
+
+  it("refreshes the Dashboard every minute", async () => {
+    vi.useFakeTimers({ toFake: ["Date", "setInterval", "clearInterval"], shouldAdvanceTime: true });
+    const { calls } = renderWithIpc(<App />, fakeCore());
+    await vi.waitFor(() => expect(dashboardInputs(calls)).toHaveLength(1));
+
+    await act(() => vi.advanceTimersByTimeAsync(60_000));
+
+    expect(dashboardInputs(calls)).toHaveLength(2);
   });
 
   it("shows zeros and an empty chart frame for an empty period", async () => {

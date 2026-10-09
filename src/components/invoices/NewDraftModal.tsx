@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Field } from "@/components/ui/Field";
 import { Modal } from "@/components/ui/Modal";
+import { useLoad } from "@/hooks/useLoad";
 import { createDraft, draftCandidates, listClients } from "@/integrations/tauri/commands";
-import type { Client } from "@/lib/clients/types";
 import { toCoreError } from "@/lib/errors";
 import { formatRange } from "@/lib/format";
 import { entryLabel } from "@/lib/invoices/entryLabel";
@@ -16,39 +16,22 @@ const choices = [
 ] as const;
 
 export function NewDraftModal({ onClose, onCreated }: { onClose: () => void; onCreated: (id: number) => void }) {
-  const [clients, setClients] = useState<Client[] | null>(null);
-  const [clientId, setClientId] = useState(0);
+  // A retired client only while it has time left to bill.
+  const clients = useLoad(() => listClients().then((all) => all.filter((c) => !c.archived || c.hasAvailable)), []).data;
+  const [pickedClientId, setPickedClientId] = useState(0);
+  const clientId = pickedClientId || (clients?.[0]?.id ?? 0);
   const [choice, setChoice] = useState<PeriodChoice>({ kind: "default" });
-  const [candidates, setCandidates] = useState<DraftCandidates | null>(null);
   const [unticked, setUnticked] = useState<Set<number>>(new Set());
-  const [error, setError] = useState<string | null>(null);
+  const [failed, setFailed] = useState<{ message: string; candidates: DraftCandidates } | null>(null);
   const [busy, setBusy] = useState(false);
 
-  useEffect(() => {
-    listClients().then((all) => {
-      // A retired client only while it has time left to bill.
-      const list = all.filter((c) => !c.archived || c.hasAvailable);
-      setClients(list);
-      setClientId(list[0]?.id ?? 0);
-    });
-  }, []);
-
   const custom = choice.kind === "custom" ? choice : null;
-  useEffect(() => {
-    if (!clientId) return;
-    let current = true;
-    draftCandidates(clientId, periodInput(choice)).then(
-      (c) => {
-        if (!current) return;
-        setCandidates(c);
-        setError(null);
-      },
-      (err) => current && setError(toCoreError(err).message),
-    );
-    return () => {
-      current = false;
-    };
-  }, [clientId, choice.kind, custom?.start, custom?.end]);
+  const { data: candidates, error: loadError } = useLoad(
+    () => (clientId ? draftCandidates(clientId, periodInput(choice)) : null),
+    [clientId, choice.kind, custom?.start, custom?.end],
+  );
+  // A failed create shows until a newer load replaces the candidates it was for.
+  const error = loadError ?? (failed?.candidates === candidates ? failed.message : null);
 
   const period = candidates?.period;
   const toggle = (id: number) => {
@@ -65,7 +48,7 @@ export function NewDraftModal({ onClose, onCreated }: { onClose: () => void; onC
       const invoice = await createDraft({ clientId, start: period.start, end: period.end, entryIds });
       onCreated(invoice.id);
     } catch (err) {
-      setError(toCoreError(err).message);
+      setFailed({ message: toCoreError(err).message, candidates });
       setBusy(false);
     }
   }
@@ -81,7 +64,7 @@ export function NewDraftModal({ onClose, onCreated }: { onClose: () => void; onC
               id="draft-client"
               value={clientId}
               onChange={(e) => {
-                setClientId(Number(e.target.value));
+                setPickedClientId(Number(e.target.value));
                 setChoice({ kind: "default" });
               }}
             >

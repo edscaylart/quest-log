@@ -1,4 +1,4 @@
-import { screen, within } from "@testing-library/react";
+import { act, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import App from "@/App";
 import type { Client } from "@/lib/clients/types";
@@ -36,7 +36,7 @@ function fakeCore(entries: TimeEntry[] = [], lastUsed: number | null = null) {
   };
 }
 
-async function openLog(core: ReturnType<typeof fakeCore>) {
+async function openLog(core: Parameters<typeof renderWithIpc>[1]) {
   const rendered = renderWithIpc(<App />, core);
   await rendered.user.click(screen.getByRole("tab", { name: "Log" }));
   return rendered;
@@ -77,6 +77,30 @@ describe("Log", () => {
 
     expect(calls).toContainEqual({ cmd: "list_time_entries", args: { clientId: 2 } });
     await vi.waitFor(() => expect(screen.getAllByRole("listitem")).toHaveLength(1));
+    expect(screen.getByRole("listitem")).toHaveTextContent("Bolt");
+  });
+
+  it("never lets a slower, older load replace a newer filter's entries", async () => {
+    let release = () => {};
+    const held = new Promise<void>((r) => (release = r));
+    const core = fakeCore([entry({ id: 1, date: "2026-10-06", seconds: 60 }), entry({ id: 2, date: "2026-10-06", seconds: 60, clientId: 2, clientName: "Bolt" })]);
+    const { user } = await openLog({
+      ...core,
+      // All Patrons answers only after Bolt's list is on screen.
+      list_time_entries: async (args) => {
+        if (args.clientId == null) await held;
+        return core.list_time_entries(args);
+      },
+    });
+
+    await user.selectOptions(screen.getByLabelText("Patron filter"), await screen.findByRole("option", { name: "Bolt" }));
+    await vi.waitFor(() => expect(screen.getAllByRole("listitem")).toHaveLength(1));
+    await act(async () => {
+      release();
+      await new Promise((r) => setTimeout(r));
+    });
+
+    expect(screen.getAllByRole("listitem")).toHaveLength(1);
     expect(screen.getByRole("listitem")).toHaveTextContent("Bolt");
   });
 

@@ -1,9 +1,8 @@
-import { useEffect, useState } from "react";
 import { Field } from "@/components/ui/Field";
+import { useLoad } from "@/hooks/useLoad";
 import { listProjects } from "@/integrations/tauri/commands";
 import type { CoreError } from "@/lib/errors";
 import { label } from "@/lib/labels";
-import type { Project } from "@/lib/projects/types";
 
 /**
  * Optional project of `clientId`: its active ones, plus `keep` (an entry's
@@ -24,10 +23,7 @@ export function ProjectField({
   keep?: number | null;
   error: CoreError | null;
 }) {
-  const [projects, setProjects] = useState<Project[]>([]);
-  useEffect(() => {
-    if (clientId) listProjects(clientId).then(setProjects);
-  }, [clientId]);
+  const projects = useLoad(() => (clientId ? listProjects(clientId) : null), [clientId]).data ?? [];
 
   const message = error?.kind === "invalid" && error.field === "project" ? error.message : null;
   return (

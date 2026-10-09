@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { ClientDetails } from "@/components/clients/ClientDetails";
 import { DeleteClientModal } from "@/components/clients/DeleteClientModal";
 import { EditClientModal } from "@/components/clients/EditClientModal";
@@ -6,28 +6,21 @@ import { ProjectList } from "@/components/projects/ProjectList";
 import { ProjectModal } from "@/components/projects/ProjectModal";
 import { RecentEntries } from "@/components/time-entries/RecentEntries";
 import { ErrorLine } from "@/components/ui/ErrorLine";
+import { useLoad } from "@/hooks/useLoad";
 import { clientDeletion, getClient, listProjects, listTimeEntries, setClientArchived } from "@/integrations/tauri/commands";
-import type { ClientDeletion, Client as ClientRecord } from "@/lib/clients/types";
+import type { ClientDeletion } from "@/lib/clients/types";
 import { toCoreError } from "@/lib/errors";
-import type { Project } from "@/lib/projects/types";
-import type { TimeEntry } from "@/lib/time-entries/types";
 
 const RECENT = 10;
 
 export function Client({ id, version, onChange, onDeleted }: { id: number; version: number; onChange: () => void; onDeleted: () => void }) {
-  const [client, setClient] = useState<ClientRecord | null>(null);
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [entries, setEntries] = useState<TimeEntry[]>([]);
+  const client = useLoad(() => getClient(id), [id, version]).data;
+  const projects = useLoad(() => listProjects(id), [id, version]).data ?? [];
+  const entries = useLoad(() => listTimeEntries(id).then((list) => list.slice(0, RECENT)), [id, version]).data ?? [];
   const [editing, setEditing] = useState(false);
   const [creatingProject, setCreatingProject] = useState(false);
   const [deleting, setDeleting] = useState<ClientDeletion | null>(null);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    getClient(id).then(setClient);
-    listProjects(id).then(setProjects);
-    listTimeEntries(id).then((list) => setEntries(list.slice(0, RECENT)));
-  }, [id, version]);
 
   if (!client) return null;
   const fail = (err: unknown) => setError(toCoreError(err).message);

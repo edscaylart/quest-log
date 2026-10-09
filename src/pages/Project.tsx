@@ -1,14 +1,12 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { DeleteProjectModal } from "@/components/projects/DeleteProjectModal";
 import { ProjectDetails } from "@/components/projects/ProjectDetails";
 import { ProjectModal } from "@/components/projects/ProjectModal";
 import { RecentEntries } from "@/components/time-entries/RecentEntries";
 import { ErrorLine } from "@/components/ui/ErrorLine";
+import { useLoad } from "@/hooks/useLoad";
 import { getClient, getProject, listTimeEntries, setProjectComplete } from "@/integrations/tauri/commands";
-import type { Client } from "@/lib/clients/types";
 import { toCoreError } from "@/lib/errors";
-import type { Project as ProjectRecord } from "@/lib/projects/types";
-import type { TimeEntry } from "@/lib/time-entries/types";
 
 export function Project({
   id,
@@ -21,21 +19,18 @@ export function Project({
   onChange: () => void;
   onDeleted: () => void;
 }) {
-  const [project, setProject] = useState<ProjectRecord | null>(null);
-  const [client, setClient] = useState<Client | null>(null);
-  const [entries, setEntries] = useState<TimeEntry[]>([]);
+  const project = useLoad(() => getProject(id), [id, version]).data;
+  const clientId = project?.clientId;
+  const client = useLoad(() => (clientId ? getClient(clientId) : null), [clientId, version]).data;
+  const entries =
+    useLoad(
+      // ponytail: filtered here; a project filter in core when lists get long.
+      () => (clientId ? listTimeEntries(clientId).then((all) => all.filter((e) => e.projectId === id)) : null),
+      [clientId, id, version],
+    ).data ?? [];
   const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    getProject(id).then(async (p) => {
-      setProject(p);
-      setClient(await getClient(p.clientId));
-      // ponytail: filtered here; a project filter in core when lists get long.
-      setEntries((await listTimeEntries(p.clientId)).filter((e) => e.projectId === id));
-    });
-  }, [id, version]);
 
   if (!project || !client) return null;
   const fail = (err: unknown) => setError(toCoreError(err).message);

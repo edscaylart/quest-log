@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { NewClientModal } from "@/components/clients/NewClientModal";
 import { AllTimeStrip } from "@/components/dashboard/AllTimeStrip";
 import { Chart } from "@/components/dashboard/Chart";
@@ -6,18 +6,15 @@ import { ClientTable } from "@/components/dashboard/ClientTable";
 import { FiguresList } from "@/components/dashboard/FiguresList";
 import { PeriodControls } from "@/components/dashboard/PeriodControls";
 import { useDashboard } from "@/hooks/dashboard/useDashboard";
+import { useLoad } from "@/hooks/useLoad";
 import { listClients } from "@/integrations/tauri/commands";
-import type { Client } from "@/lib/clients/types";
 import { label } from "@/lib/labels";
 
 export function Home({ version, onChange }: { version: number; onChange: () => void }) {
-  const [clients, setClients] = useState<Client[] | null>(null);
   const [creating, setCreating] = useState(false);
   const { saved, choose, offset, setOffset, data, error } = useDashboard(version);
 
-  useEffect(() => {
-    listClients().then(setClients);
-  }, [version]);
+  const clients = useLoad(listClients, [version]).data;
 
   if (!clients) return <h1>Home</h1>;
   if (clients.length === 0)

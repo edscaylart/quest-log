@@ -7,13 +7,13 @@ import { Invoices } from "@/pages/Invoices";
 import { LevelUp } from "@/components/progress/LevelUp";
 import { TimeEntryModal } from "@/components/time-entries/TimeEntryModal";
 import { Hud } from "@/components/timer/Hud";
+import { useLoad } from "@/hooks/useLoad";
 import { Nav, type Screen } from "@/hooks/useNav";
 import { getProgress, getTimer, startTimer } from "@/integrations/tauri/commands";
 import { onTimerChanged, onTrayError } from "@/integrations/tauri/events";
 import { toCoreError } from "@/lib/errors";
 import { label } from "@/lib/labels";
-import type { Progress } from "@/lib/progress/types";
-import type { Overlong, Stopped, Timer } from "@/lib/timer/types";
+import type { Overlong, Stopped } from "@/lib/timer/types";
 import { Log } from "@/pages/Log";
 import { Project } from "@/pages/Project";
 import { Settings } from "@/pages/Settings";
@@ -49,17 +49,12 @@ export default function App() {
   const [newEntry, setNewEntry] = useState(false);
   // Bumped when clients, entries or the Timer change, so every screen reloads.
   const [version, changed] = useReducer((n: number) => n + 1, 0);
-  const [timer, setTimer] = useState<Timer | null>(null);
+  const timer = useLoad(getTimer, [version]).data;
   const [fixing, setFixing] = useState<Overlong | null>(null);
   const [timerError, setTimerError] = useState<string | null>(null);
   const failed = (err: unknown) => setTimerError(toCoreError(err).message);
 
-  const [progress, setProgress] = useState<Progress | null>(null);
-
-  useEffect(() => {
-    getTimer().then(setTimer);
-    getProgress().then(setProgress);
-  }, [version]);
+  const progress = useLoad(getProgress, [version]).data;
 
   const stopped = (outcome: Stopped | null) => {
     if (outcome?.kind === "needsEdit") setFixing(outcome.overlong);

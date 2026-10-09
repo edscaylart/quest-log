@@ -1,19 +1,15 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { InvoiceList } from "@/components/invoices/InvoiceList";
 import { NewDraftModal } from "@/components/invoices/NewDraftModal";
+import { useLoad } from "@/hooks/useLoad";
 import { useNav } from "@/hooks/useNav";
 import { listInvoices } from "@/integrations/tauri/commands";
-import type { InvoiceSummary } from "@/lib/invoices/types";
 import { label } from "@/lib/labels";
 
 export function Invoices({ version, onChange }: { version: number; onChange: () => void }) {
-  const [invoices, setInvoices] = useState<InvoiceSummary[] | null>(null);
   const [creating, setCreating] = useState(false);
   const { push } = useNav();
-
-  useEffect(() => {
-    listInvoices().then(setInvoices);
-  }, [version]);
+  const invoices = useLoad(listInvoices, [version]).data;
 
   return (
     <>
