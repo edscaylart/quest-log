@@ -236,6 +236,24 @@ describe("Patron detail", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
+  it("shows a save failure on the form when a rate change reprices nothing", async () => {
+    const core = fakeCore({ repricing: { seconds: 0, oldCents: 0, newCents: 0 } });
+    const { user } = await openAcme({
+      ...core,
+      update_client: () => {
+        throw { kind: "invalid", field: "name", message: "Name taken" };
+      },
+    });
+
+    await user.click(screen.getByRole("button", { name: "Edit Patron" }));
+    const dialog = screen.getByRole("dialog", { name: "Edit Patron" });
+    await user.clear(within(dialog).getByLabelText("Gold/hr"));
+    await user.type(within(dialog).getByLabelText("Gold/hr"), "70");
+    await user.click(within(dialog).getByRole("button", { name: "Save" }));
+
+    expect(await within(dialog).findByText("Name taken")).toBeInTheDocument();
+  });
+
   it("saves without a confirm when the rate is unchanged", async () => {
     const { user, calls } = await openAcme(fakeCore());
 
@@ -289,6 +307,34 @@ describe("Quest detail", () => {
 
     await user.click(screen.getByRole("button", { name: "Reopen" }));
     expect(calls).toContainEqual({ cmd: "set_project_complete", args: { id: 1, complete: false } });
+  });
+
+  it("confirms a rate change with its repricing effect before saving", async () => {
+    const { user, calls } = await openAcme(fakeCore({ projects: [site] }));
+    await user.click(await screen.findByRole("button", { name: /Website/ }));
+    await user.click(await screen.findByRole("button", { name: "Edit Quest" }));
+    const dialog = screen.getByRole("dialog", { name: "Edit Quest" });
+    await user.clear(within(dialog).getByLabelText("Gold/hr"));
+    await user.type(within(dialog).getByLabelText("Gold/hr"), "140");
+    await user.click(within(dialog).getByRole("button", { name: "Save" }));
+
+    const confirm = await screen.findByRole("dialog", { name: "Change rate?" });
+    expect(confirm).toHaveTextContent("12.5 uninvoiced hours reprice: $750.00 → $875.00");
+    expect(calls.some((c) => c.cmd === "update_project")).toBe(false);
+    await user.click(within(confirm).getByRole("button", { name: "Reprice" }));
+
+    expect(calls).toContainEqual({ cmd: "update_project", args: { id: 1, input: { name: "Website", rate: "140" } } });
+    await vi.waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+  });
+
+  it("saves a Quest without a confirm when the rate is unchanged", async () => {
+    const { user, calls } = await openAcme(fakeCore({ projects: [site] }));
+    await user.click(await screen.findByRole("button", { name: /Website/ }));
+    await user.click(await screen.findByRole("button", { name: "Edit Quest" }));
+    await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Save" }));
+
+    await vi.waitFor(() => expect(calls.map((c) => c.cmd)).toContain("update_project"));
+    expect(calls.map((c) => c.cmd)).not.toContain("preview_project_rate");
   });
 });
 

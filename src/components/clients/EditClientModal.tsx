@@ -2,11 +2,10 @@ import { useState, type FormEvent } from "react";
 import { RepriceConfirm } from "@/components/projects/RepriceConfirm";
 import { Field } from "@/components/ui/Field";
 import { Modal } from "@/components/ui/Modal";
-import { useFormAction } from "@/hooks/useFormAction";
+import { useRateEdit } from "@/hooks/projects/useRateEdit";
 import { previewClientRate, updateClient } from "@/integrations/tauri/commands";
-import type { Client, ClientEdit, Repricing } from "@/lib/clients/types";
+import type { Client, ClientEdit } from "@/lib/clients/types";
 import { label } from "@/lib/labels";
-import { reprices } from "@/lib/projects/reprices";
 
 export function EditClientModal({ client, onClose, onSaved }: { client: Client; onClose: () => void; onSaved: () => void }) {
   const initialRate = (client.rateCents / 100).toFixed(2);
@@ -18,29 +17,18 @@ export function EditClientModal({ client, onClose, onSaved }: { client: Client; 
     email: client.email ?? "",
     netDays: client.netDays?.toString() ?? "",
   });
-  const { error, busy, run: attempt, fieldError } = useFormAction();
-  const [confirming, setConfirming] = useState<Repricing | null>(null);
+  const { error, busy, fieldError, submit, repricing, confirm, cancel } = useRateEdit(async () => {
+    await updateClient(client.id, form);
+    onSaved();
+  });
   const set = (field: keyof ClientEdit) => (e: { target: { value: string } }) => setForm({ ...form, [field]: e.target.value });
-  // A failure lands back on the form.
-  const run = (action: () => Promise<unknown>) => attempt(action).then((ok) => ok || setConfirming(null));
 
-  const save = () =>
-    run(async () => {
-      await updateClient(client.id, form);
-      onSaved();
-    });
-
-  function submit(e: FormEvent) {
+  function onSubmit(e: FormEvent) {
     e.preventDefault();
-    if (form.rate === initialRate) return save();
-    run(async () => {
-      const repricing = await previewClientRate(client.id, form.rate);
-      if (reprices(repricing)) setConfirming(repricing);
-      else await save();
-    });
+    submit(form.rate === initialRate ? null : () => previewClientRate(client.id, form.rate));
   }
 
-  if (confirming) return <RepriceConfirm repricing={confirming} busy={busy} onCancel={() => setConfirming(null)} onConfirm={save} />;
+  if (repricing) return <RepriceConfirm repricing={repricing} busy={busy} onCancel={cancel} onConfirm={confirm} />;
 
   const text = (field: keyof ClientEdit, title: string, extra: object = {}) => (
     <Field id={`client-${field}`} label={title} error={fieldError(field)}>
@@ -50,7 +38,7 @@ export function EditClientModal({ client, onClose, onSaved }: { client: Client; 
 
   return (
     <Modal title={`Edit ${label.client}`} onClose={onClose}>
-      <form onSubmit={submit} noValidate>
+      <form onSubmit={onSubmit} noValidate>
         {text("name", "Name")}
         {text("rate", label.rate, { inputMode: "decimal" })}
         {text("billingName", "Billing name", { placeholder: form.name })}

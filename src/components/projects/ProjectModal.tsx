@@ -2,11 +2,9 @@ import { useState, type FormEvent } from "react";
 import { RepriceConfirm } from "@/components/projects/RepriceConfirm";
 import { Field } from "@/components/ui/Field";
 import { Modal } from "@/components/ui/Modal";
-import { useFormAction } from "@/hooks/useFormAction";
+import { useRateEdit } from "@/hooks/projects/useRateEdit";
 import { createProject, previewProjectRate, updateProject } from "@/integrations/tauri/commands";
-import type { Repricing } from "@/lib/clients/types";
 import { label } from "@/lib/labels";
-import { reprices } from "@/lib/projects/reprices";
 import type { Project } from "@/lib/projects/types";
 
 /** New (`project` null) or edit; a rate edit confirms its repricing first. */
@@ -24,32 +22,21 @@ export function ProjectModal({
   const initialRate = project?.rateCents == null ? "" : (project.rateCents / 100).toFixed(2);
   const [name, setName] = useState(project?.name ?? "");
   const [rate, setRate] = useState(initialRate);
-  const { error, busy, run: attempt, fieldError } = useFormAction();
-  const [confirming, setConfirming] = useState<Repricing | null>(null);
-  // A failure lands back on the form.
-  const run = (action: () => Promise<unknown>) => attempt(action).then((ok) => ok || setConfirming(null));
+  const { error, busy, fieldError, submit, repricing, confirm, cancel } = useRateEdit(async () => {
+    await (project ? updateProject(project.id, { name, rate }) : createProject(clientId, { name, rate }));
+    onSaved();
+  });
 
-  const save = () =>
-    run(async () => {
-      await (project ? updateProject(project.id, { name, rate }) : createProject(clientId, { name, rate }));
-      onSaved();
-    });
-
-  function submit(e: FormEvent) {
+  function onSubmit(e: FormEvent) {
     e.preventDefault();
-    if (!project || rate === initialRate) return save();
-    run(async () => {
-      const repricing = await previewProjectRate(project.id, rate);
-      if (reprices(repricing)) setConfirming(repricing);
-      else await save();
-    });
+    submit(!project || rate === initialRate ? null : () => previewProjectRate(project.id, rate));
   }
 
-  if (confirming) return <RepriceConfirm repricing={confirming} busy={busy} onCancel={() => setConfirming(null)} onConfirm={save} />;
+  if (repricing) return <RepriceConfirm repricing={repricing} busy={busy} onCancel={cancel} onConfirm={confirm} />;
 
   return (
     <Modal title={project ? `Edit ${label.project}` : `New ${label.project}`} onClose={onClose}>
-      <form onSubmit={submit} noValidate>
+      <form onSubmit={onSubmit} noValidate>
         <Field id="project-name" label="Name" error={fieldError("name")}>
           <input id="project-name" value={name} onChange={(e) => setName(e.target.value)} autoFocus aria-invalid={!!fieldError("name")} />
         </Field>
