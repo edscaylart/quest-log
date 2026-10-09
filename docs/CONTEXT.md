@@ -115,7 +115,7 @@ Any other move is rejected, and only a Draft can be deleted.
 - **Draft.** Lines, totals and rates are worked out live from its time entries. It can hold any of its client's time entries that are on no invoice, whatever their date; the period does not limit them. It is created with any set of those time entries, including none. Deleting it frees its time entries back to uninvoiced.
 - **Send** (Draft → Sent):
   - Needs at least one time entry and the freelancer's name in Settings. A zero total is fine.
-  - Gives the invoice a number the first time only: the Settings prefix plus the next number, zero-padded to 4 digits (`INV-0001`). The next number then goes up by one. A number is never reused or given again.
+  - Gives the invoice a number the first time only: the Settings prefix plus the next number, zero-padded to 4 digits (`INV-0001`). The next number then goes up by one. An invoice that already has a number keeps it and does not use up another.
   - Sets the issue date to today and the due date to issue date + Net days. Net days is the invoice's own override if set, else the client's, else the Settings default.
   - Freezes the lines, totals, timesheet, seller details and bill-to details into a snapshot. The bill-to name is the client's billing name if set, else its name. Later changes to Rates, client details or Settings do not reach a Sent or Paid invoice.
   - Freezes each line's Rate onto its time entries and locks them: a locked time entry cannot be edited or deleted.
@@ -182,7 +182,7 @@ Any other move is rejected, and only a Draft can be deleted.
 
 - Uninvoiced + Invoiced-unpaid + Paid always equals earned.
 - A time entry on a Sent or Paid invoice earns at its frozen Rate. Any other time entry, including one on a Draft, earns at its live Rate: its project's if set, else its client's.
-- Per client, each part is summed exactly as seconds × Rate and rounded to the cent once. Earned is the sum of those rounded parts, and period totals add up the clients.
-- A running Timer counts live as Uninvoiced on its start day (it earns Gold before it is stopped, but no XP).
-- Home's all-time figures, which ignore the period: total Invoiced-unpaid, total Uninvoiced, and the count of overdue invoices.
+- For a period, each part is summed per client exactly as seconds × Rate and rounded to the cent once. Earned is the sum of those rounded parts, and period totals add up the clients.
+- A running Timer counts live as Uninvoiced on its start day (it earns before it is stopped, but gives no XP).
+- Home's all-time figures, which ignore the period: total Invoiced-unpaid, total Uninvoiced, and the count of overdue invoices. Each total is summed across all clients and rounded once, so it can differ by a cent from adding up per-client figures.
 - **CSV export:** the period's time entries, oldest first, optionally for one client. The running Timer is left out. Each row's amount is rounded on its own, so a sum can differ from invoice line totals by a few cents.

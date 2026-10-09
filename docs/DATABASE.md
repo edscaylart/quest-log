@@ -24,7 +24,7 @@ A Client: someone the freelancer bills.
 | `rate_cents` | The client's Rate. `>= 0`. |
 | `billing_name` | Name on invoices. `NULL` falls back to `name`. |
 | `address`, `email` | Bill-to details, optional. `email` must contain `@`. |
-| `net_days` | Payment terms override, 0–365. `NULL` uses the Settings default. |
+| `net_days` | Payment terms override, 0–365 (cap enforced by the core; the schema only checks `>= 0`). `NULL` uses the Settings default. |
 | `archived` | Client status: 0 Active, 1 Archived. |
 | `created_at` | Unix seconds. |
 
@@ -58,8 +58,8 @@ A Time entry.
 
 Invariants:
 
-- **At most one invoice.** An entry sits on at most one invoice because the link is a single column. That invoice belongs to the entry's client: attaching checks it, and moving the entry to another client clears `invoice_id`.
-- **Locked = frozen Rate.** `invoiced_rate_cents` is set exactly while the entry's invoice is Sent or Paid. Send sets it and Unseal clears it. A non-`NULL` value means the entry is **locked**: it cannot be edited or deleted.
+- **At most one invoice.** A time entry sits on at most one invoice because the link is a single column. That invoice belongs to the time entry's client: attaching checks it, and moving the time entry to another client clears `invoice_id`.
+- **Locked = frozen Rate.** `invoiced_rate_cents` is set exactly while the entry's invoice is Sent or Paid. Send sets it and Unseal clears it. A non-`NULL` value means the time entry is **locked**: it cannot be edited or deleted.
 - **Effective Rate:** `COALESCE(invoiced_rate_cents, projects.rate_cents, clients.rate_cents)`.
 
 ### `timer`
@@ -86,7 +86,7 @@ An Invoice.
 | `state` | Enum, `CHECK (state IN ('draft', 'sent', 'paid'))`. Default `'draft'`. |
 | `timesheet` | Print the timesheet page. Default 1. |
 | `number` | Given at the first Send and kept on Unseal. `NULL` only for a Draft never sent. |
-| `net_days` | This invoice's payment terms override, 0–365. `NULL` uses the client's, else Settings'. |
+| `net_days` | This invoice's payment terms override, 0–365 (cap enforced by the core). `NULL` uses the client's, else Settings'. |
 | `issue_date`, `due_date` | Local days. Set exactly while Sent or Paid. |
 | `paid_date` | Local day. Set exactly while Paid. |
 | `snapshot` | JSON frozen at Send. Set exactly while Sent or Paid. |
@@ -139,7 +139,7 @@ sqlx stores each migration's checksum. A migration that changed after it was app
 
 ### Automatic pre-migration backup
 
-Before applying a pending migration to a database that already has data, `core::open` snapshots it to `backups/pre-migration-<UTC time>.db` beside the database file. The last 3 are kept. If the snapshot fails, nothing is migrated. A brand-new or up-to-date database takes no snapshot.
+Before applying a pending migration to a database that already has migrations applied, `core::open` snapshots it to `backups/pre-migration-<UTC time>.db` beside the database file. The last 3 are kept. If the snapshot fails, nothing is migrated. A brand-new or up-to-date database takes no snapshot.
 
 Two other kinds of backup sit in the same folder: daily backups (`daily-YYYY-MM-DD.db`, last 7 kept) and pre-restore backups (`pre-restore-<UTC time>.db`, last 3 kept).
 
