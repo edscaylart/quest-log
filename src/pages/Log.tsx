@@ -2,8 +2,9 @@ import { useState } from "react";
 import { DayList } from "@/components/time-entries/DayList";
 import { LogToolbar } from "@/components/time-entries/LogToolbar";
 import { TimeEntryModal } from "@/components/time-entries/TimeEntryModal";
+import { useClients } from "@/hooks/clients/useClients";
 import { useLoad } from "@/hooks/useLoad";
-import { listClients, listTimeEntries } from "@/integrations/tauri/commands";
+import { listTimeEntries } from "@/integrations/tauri/commands";
 import type { TimeEntry } from "@/lib/time-entries/types";
 
 /**
@@ -26,7 +27,7 @@ export function Log({
 }) {
   const [clientId, setClientId] = useState<number | null>(null);
   const [editing, setEditing] = useState<TimeEntry | null>(null);
-  const clients = useLoad(listClients, []).data ?? [];
+  const clients = useClients() ?? [];
   const entries = useLoad(() => listTimeEntries(clientId), [clientId, version]).data;
 
   const close = () => {

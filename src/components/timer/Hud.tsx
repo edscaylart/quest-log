@@ -4,9 +4,10 @@ import { Level } from "@/components/progress/Level";
 import { ErrorLine } from "@/components/ui/ErrorLine";
 import { Field } from "@/components/ui/Field";
 import { Modal } from "@/components/ui/Modal";
+import { useClients } from "@/hooks/clients/useClients";
 import { useElapsed } from "@/hooks/timer/useElapsed";
 import { useLoad } from "@/hooks/useLoad";
-import { discardTimer, lastUsed, listClients, startTimer, stopTimer, updateTimer } from "@/integrations/tauri/commands";
+import { discardTimer, lastUsed, startTimer, stopTimer, updateTimer } from "@/integrations/tauri/commands";
 import { onTrayStart } from "@/integrations/tauri/events";
 import type { Client } from "@/lib/clients/types";
 import { toCoreError, type CoreError } from "@/lib/errors";
@@ -40,7 +41,7 @@ export function Hud({
   onError: (err: unknown) => void;
   onSettings: () => void;
 }) {
-  const allClients = useLoad(listClients, [version]).data ?? [];
+  const allClients = useClients(undefined, [version]) ?? [];
   // Retired clients take no new Timers; a running one keeps its own.
   const clients = allClients.filter((c) => !c.archived);
   const [starting, setStarting] = useState(false);

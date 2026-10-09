@@ -5,16 +5,15 @@ import { Chart } from "@/components/dashboard/Chart";
 import { ClientTable } from "@/components/dashboard/ClientTable";
 import { FiguresList } from "@/components/dashboard/FiguresList";
 import { PeriodControls } from "@/components/dashboard/PeriodControls";
+import { useClients } from "@/hooks/clients/useClients";
 import { useDashboard } from "@/hooks/dashboard/useDashboard";
-import { useLoad } from "@/hooks/useLoad";
-import { listClients } from "@/integrations/tauri/commands";
 import { label } from "@/lib/labels";
 
 export function Home({ version, onChange }: { version: number; onChange: () => void }) {
   const [creating, setCreating] = useState(false);
   const { saved, choose, offset, setOffset, data, error } = useDashboard(version);
 
-  const clients = useLoad(listClients, [version]).data;
+  const clients = useClients(undefined, [version]);
 
   if (!clients) return <h1>Home</h1>;
   if (clients.length === 0)

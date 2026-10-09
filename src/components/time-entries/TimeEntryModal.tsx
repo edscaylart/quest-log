@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { ProjectField } from "@/components/projects/ProjectField";
 import { Field } from "@/components/ui/Field";
 import { Modal } from "@/components/ui/Modal";
+import { useClients } from "@/hooks/clients/useClients";
 import { useLoad } from "@/hooks/useLoad";
 import {
   createTimeEntry,
@@ -9,7 +10,6 @@ import {
   discardTimer,
   finishTimer,
   lastUsed,
-  listClients,
   updateTimeEntry,
 } from "@/integrations/tauri/commands";
 import { toCoreError, type CoreError } from "@/lib/errors";
@@ -45,20 +45,20 @@ export function TimeEntryModal({
   const [busy, setBusy] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
 
-  const clients = useLoad(
-    () =>
-      Promise.all([listClients(), initial ? null : lastUsed()]).then(([all, last]) => {
-        // Retired clients take no new entries; an entry keeps its own.
-        const list = all.filter((c) => !c.archived || c.id === initial?.clientId);
-        if (initial) return list;
-        // A new entry seeds its form once.
-        const known = list.some((c) => c.id === last?.clientId);
-        setClientId(known ? last!.clientId : (list[0]?.id ?? 0));
-        setProjectId(known ? last!.projectId : null);
-        return list;
-      }),
-    [initial],
-  ).data;
+  // Retired clients take no new entries; an entry keeps its own.
+  const listed = useClients((c) => !c.archived || c.id === initial?.clientId, [initial]);
+  // Boxed so a null lastUsed still reads as loaded.
+  const lastPick = useLoad(() => (initial ? null : lastUsed().then((used) => ({ used }))), [initial]).data;
+  // A new entry seeds its form once, before its Clients show.
+  const [seeded, setSeeded] = useState(!!initial);
+  if (!seeded && listed && lastPick) {
+    const { used } = lastPick;
+    const known = listed.some((c) => c.id === used?.clientId);
+    setSeeded(true);
+    setClientId(known ? used!.clientId : (listed[0]?.id ?? 0));
+    setProjectId(known ? used!.projectId : null);
+  }
+  const clients = seeded ? listed : null;
 
   const fieldError = (field: string) => (error?.kind === "invalid" && error.field === field ? error.message : null);
 

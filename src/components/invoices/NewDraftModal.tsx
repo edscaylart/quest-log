@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { Field } from "@/components/ui/Field";
 import { Modal } from "@/components/ui/Modal";
+import { useClients } from "@/hooks/clients/useClients";
 import { useLoad } from "@/hooks/useLoad";
-import { createDraft, draftCandidates, listClients } from "@/integrations/tauri/commands";
+import { createDraft, draftCandidates } from "@/integrations/tauri/commands";
 import { toCoreError } from "@/lib/errors";
 import { formatRange } from "@/lib/format";
 import { entryLabel } from "@/lib/invoices/entryLabel";
@@ -17,7 +18,7 @@ const choices = [
 
 export function NewDraftModal({ onClose, onCreated }: { onClose: () => void; onCreated: (id: number) => void }) {
   // A retired client only while it has time left to bill.
-  const clients = useLoad(() => listClients().then((all) => all.filter((c) => !c.archived || c.hasAvailable)), []).data;
+  const clients = useClients((c) => !c.archived || c.hasAvailable);
   const [pickedClientId, setPickedClientId] = useState(0);
   const clientId = pickedClientId || (clients?.[0]?.id ?? 0);
   const [choice, setChoice] = useState<PeriodChoice>({ kind: "default" });
