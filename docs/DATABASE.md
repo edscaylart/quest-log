@@ -109,6 +109,7 @@ One row: the freelancer's invoice header and invoicing defaults. It is created b
 | `net_days` | Default payment terms. `> 0`, default 30. |
 | `invoice_prefix` | Default `'INV-'`. |
 | `next_invoice_number` | `> 0`, default 1. Goes up by one at each invoice's first Send only. |
+| `awesomeapi_token` | Optional AwesomeAPI token for Home's BRL estimate. Kept only in this local database; never in a snapshot. |
 
 ### `level_up`
 

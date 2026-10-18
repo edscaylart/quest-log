@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { Field } from "@/components/ui/Field";
 import { useFormAction } from "@/hooks/useFormAction";
 import { updateSettings } from "@/integrations/tauri/commands";
+import { label } from "@/lib/labels";
 import type { Settings, SettingsEdit } from "@/lib/settings/types";
 
 export function SettingsForm({ settings: s }: { settings: Settings }) {
@@ -15,6 +16,7 @@ export function SettingsForm({ settings: s }: { settings: Settings }) {
     netDays: s.netDays.toString(),
     invoicePrefix: s.invoicePrefix,
     nextInvoiceNumber: s.nextInvoiceNumber.toString(),
+    awesomeapiToken: s.awesomeapiToken ?? "",
   });
   const { error, busy, run, fieldError } = useFormAction();
   const [saved, setSaved] = useState(false);
@@ -59,6 +61,11 @@ export function SettingsForm({ settings: s }: { settings: Settings }) {
         {text("netDays", "Net days", { inputMode: "numeric" })}
         {text("invoicePrefix", "Invoice prefix")}
         {text("nextInvoiceNumber", "Next invoice number", { inputMode: "numeric" })}
+      </section>
+      <section className="day" aria-label="Currency">
+        <h2>Currency</h2>
+        {text("awesomeapiToken", "AwesomeAPI token", { type: "password", autoComplete: "off" })}
+        <p className="hint">Optional. Home shows Earned and {label.uninvoiced} in BRL too; works without a token, with a lower rate limit.</p>
       </section>
       {error && error.kind !== "invalid" && <p className="error">{error.message}</p>}
       <div className="actions">

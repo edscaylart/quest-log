@@ -1,7 +1,12 @@
 import "@testing-library/jest-dom/vitest";
 import { cleanup } from "@testing-library/react";
 import { clearMocks } from "@tauri-apps/api/mocks";
-import { afterEach } from "vitest";
+import { afterEach, beforeEach, vi } from "vitest";
+
+// No test reaches the network: the BRL rate fetch fails unless a test stubs it.
+beforeEach(() => {
+  vi.stubGlobal("fetch", vi.fn(() => Promise.reject(new Error("no network in tests"))));
+});
 
 afterEach(async () => {
   // Node-environment tests (PDFs) have no DOM or IPC to clear.

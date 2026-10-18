@@ -8,6 +8,7 @@ import { PeriodControls } from "@/components/dashboard/PeriodControls";
 import { ErrorLine } from "@/components/ui/ErrorLine";
 import { useClients } from "@/hooks/clients/useClients";
 import { useDashboard } from "@/hooks/dashboard/useDashboard";
+import { useUsdBrl } from "@/hooks/dashboard/useUsdBrl";
 import { label } from "@/lib/labels";
 
 export function Home({ version, onChange }: { version: number; onChange: () => void }) {
@@ -15,6 +16,7 @@ export function Home({ version, onChange }: { version: number; onChange: () => v
   const { saved, choose, offset, setOffset, data, error } = useDashboard(version);
 
   const { clients, error: clientsError } = useClients(undefined, [version]);
+  const usdBrl = useUsdBrl();
 
   if (!clients)
     return (
@@ -45,14 +47,14 @@ export function Home({ version, onChange }: { version: number; onChange: () => v
   return (
     <>
       <h1>Home</h1>
-      {data && <AllTimeStrip allTime={data.allTime} />}
+      {data && <AllTimeStrip allTime={data.allTime} usdBrl={usdBrl} />}
       <PeriodControls saved={saved} period={data?.period} offset={offset} setOffset={setOffset} choose={choose} />
       <ErrorLine error={clientsError ?? error} />
 
       {data && (
         <>
           <section aria-label="Period totals">
-            <FiguresList figures={data.total} />
+            <FiguresList figures={data.total} usdBrl={usdBrl} />
           </section>
           {data.total.seconds === 0 && <p className="hint">No time logged — start a Timer</p>}
           <Chart data={data} />

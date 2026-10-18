@@ -230,6 +230,7 @@ async fn an_archived_client_can_still_be_billed_and_paid() {
             net_days: "30".into(),
             invoice_prefix: "INV-".into(),
             next_invoice_number: "1".into(),
+            awesomeapi_token: String::new(),
         },
     )
     .await

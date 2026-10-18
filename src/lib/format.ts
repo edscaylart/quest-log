@@ -2,6 +2,11 @@ const usd = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" 
 
 export const formatCents = (cents: number) => usd.format(cents / 100);
 
+const brl = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
+
+/** USD cents at a USD→BRL rate → "≈ R$ 5.570,12". A display-only estimate. */
+export const formatBrl = (cents: number, usdBrl: number) => `≈ ${brl.format((cents / 100) * usdBrl)}`;
+
 const pad = (n: number) => String(n).padStart(2, "0");
 
 /** 5400 → "1:30". Tracked time in the app is always H:MM. */

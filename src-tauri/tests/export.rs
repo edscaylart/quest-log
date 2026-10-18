@@ -88,6 +88,7 @@ async fn setup() -> (Fixture, Client) {
         net_days: "30".into(),
         invoice_prefix: "INV-".into(),
         next_invoice_number: "1".into(),
+        awesomeapi_token: String::new(),
     };
     update_settings(&f.db, seller).await.unwrap();
     let acme = client(&f, "Acme", "100").await;

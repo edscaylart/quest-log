@@ -74,6 +74,7 @@ fn settings(prefix: &str, next: &str, net_days: &str) -> SettingsEdit {
         net_days: net_days.into(),
         invoice_prefix: prefix.into(),
         next_invoice_number: next.into(),
+        awesomeapi_token: String::new(),
     }
 }
 

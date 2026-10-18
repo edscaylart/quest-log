@@ -12,6 +12,8 @@ export type Settings = {
   netDays: number;
   invoicePrefix: string;
   nextInvoiceNumber: number;
+  /** Optional AwesomeAPI token for the Home BRL estimate. Local only. */
+  awesomeapiToken: string | null;
 };
 /** Every field as typed; blank clears an optional one. */
 export type SettingsEdit = { [K in keyof Settings]: string };
