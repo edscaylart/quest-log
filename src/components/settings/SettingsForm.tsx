@@ -65,7 +65,7 @@ export function SettingsForm({ settings: s }: { settings: Settings }) {
       <section className="day" aria-label="Currency">
         <h2>Currency</h2>
         {text("awesomeapiToken", "AwesomeAPI token", { type: "password", autoComplete: "off" })}
-        <p className="hint">Optional. Home shows Earned and {label.uninvoiced} in BRL too; works without a token, with a lower rate limit.</p>
+        <p className="hint">Optional. Home shows Earned and {label.uninvoiced} in BRL too; works without a token, with a lower rate limit. Backups include it.</p>
       </section>
       {error && error.kind !== "invalid" && <p className="error">{error.message}</p>}
       <div className="actions">

@@ -69,7 +69,7 @@ describe("Home", () => {
   });
 
   it("shows Earned and Unclaimed in BRL too, fetched with the Settings token", async () => {
-    const fetch = vi.fn(async (_url: URL) => new Response(JSON.stringify({ USDBRL: { bid: "5.0" } })));
+    const fetch = vi.fn(async (_url: string, _init?: RequestInit) => new Response(JSON.stringify({ USDBRL: { bid: "5.0" } })));
     vi.stubGlobal("fetch", fetch);
     renderWithIpc(<App />, { ...fakeCore(), get_settings: () => ({ awesomeapiToken: "sk_test" }) });
 
@@ -78,7 +78,7 @@ describe("Home", () => {
     expect(figuresList).toHaveTextContent("Unclaimed$344.17≈ R$ 1.720,85");
     expect(figuresList).toHaveTextContent("Owed$0.00Treasury");
     expect(screen.getByRole("region", { name: "All time" })).toHaveTextContent("Unclaimed $999.00 ≈ R$ 4.995,00");
-    expect(String(fetch.mock.calls[0][0])).toBe("https://economia.awesomeapi.com.br/json/last/USD-BRL?token=sk_test");
+    expect(fetch).toHaveBeenCalledWith("https://economia.awesomeapi.com.br/json/last/USD-BRL", { headers: { "x-api-key": "sk_test" } });
   });
 
   it("leaves BRL out when the rate can't be fetched", async () => {
