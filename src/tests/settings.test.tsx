@@ -16,6 +16,7 @@ const defaults: Settings = {
   netDays: 30,
   invoicePrefix: "INV-",
   nextInvoiceNumber: 1,
+  awesomeapiToken: null,
 };
 
 function fakeCore(settings = defaults) {
@@ -74,6 +75,7 @@ describe("Settings", () => {
     await user.type(screen.getByLabelText("Net days"), "15");
     await user.clear(screen.getByLabelText("Next invoice number"));
     await user.type(screen.getByLabelText("Next invoice number"), "42");
+    await user.type(screen.getByLabelText("AwesomeAPI token"), "sk_test");
     await user.click(screen.getByRole("button", { name: "Save" }));
 
     expect(calls).toContainEqual({
@@ -89,6 +91,7 @@ describe("Settings", () => {
           netDays: "15",
           invoicePrefix: "INV-",
           nextInvoiceNumber: "42",
+          awesomeapiToken: "sk_test",
         },
       },
     });

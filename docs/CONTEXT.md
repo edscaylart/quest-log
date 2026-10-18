@@ -185,6 +185,7 @@ Any other move is rejected, and only a Draft can be deleted.
 - For a period, each part is summed per client exactly as seconds × Rate and rounded to the cent once. Earned is the sum of those rounded parts, and period totals add up the clients.
 - A running Timer counts live as Uninvoiced on its start day (it earns before it is stopped, but gives no XP).
 - Home's all-time figures, which ignore the period: total Invoiced-unpaid, total Uninvoiced, and the count of overdue invoices. Each total is summed across all clients and rounded once, so it can differ by a cent from adding up per-client figures.
+- **BRL estimate:** Home also shows Earned and Uninvoiced (the period cards and the all-time strip) converted to BRL at the latest USD→BRL rate from AwesomeAPI, fetched each time Home opens. It is display only: never stored, never on an invoice, PDF or CSV, and it is left out when the rate can't be fetched. Gold is always USD.
 - **CSV export:** the period's time entries, oldest first, optionally for one client. The running Timer is left out. Each row's amount is rounded on its own, so a sum can differ from invoice line totals by a few cents.
 
 ## Pointers

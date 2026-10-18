@@ -19,6 +19,8 @@ pub struct Settings {
     pub net_days: i64,
     pub invoice_prefix: String,
     pub next_invoice_number: i64,
+    /// Optional AwesomeAPI token for the Home BRL estimate. Local only, never on an invoice.
+    pub awesomeapi_token: Option<String>,
 }
 
 /// Every field as typed in the form; blank clears an optional one.
@@ -34,12 +36,13 @@ pub struct SettingsEdit {
     pub net_days: String,
     pub invoice_prefix: String,
     pub next_invoice_number: String,
+    pub awesomeapi_token: String,
 }
 
 pub async fn get_settings(db: &Db) -> Result<Settings> {
     Ok(sqlx::query_as(
         "SELECT name, business_name, address, email, tax_id, payment_instructions, \
-         net_days, invoice_prefix, next_invoice_number FROM settings",
+         net_days, invoice_prefix, next_invoice_number, awesomeapi_token FROM settings",
     )
     .fetch_one(db)
     .await?)
@@ -65,7 +68,8 @@ pub async fn update_settings(db: &Db, input: SettingsEdit) -> Result<Settings> {
 
     sqlx::query(
         "UPDATE settings SET name = ?, business_name = ?, address = ?, email = ?, tax_id = ?, \
-         payment_instructions = ?, net_days = ?, invoice_prefix = ?, next_invoice_number = ?",
+         payment_instructions = ?, net_days = ?, invoice_prefix = ?, next_invoice_number = ?, \
+         awesomeapi_token = ?",
     )
     .bind(name)
     .bind(blank_to_none(&input.business_name))
@@ -76,6 +80,7 @@ pub async fn update_settings(db: &Db, input: SettingsEdit) -> Result<Settings> {
     .bind(net_days)
     .bind(input.invoice_prefix.trim())
     .bind(next_number)
+    .bind(blank_to_none(&input.awesomeapi_token))
     .execute(db)
     .await?;
     get_settings(db).await

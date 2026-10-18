@@ -68,6 +68,28 @@ describe("Home", () => {
     expect(rows.map((r) => r.textContent)).toEqual(["Bolt2:10$216.67$216.67$0.00$0.00", "Acme1:30$127.50$127.50$0.00$0.00"]);
   });
 
+  it("shows Earned and Unclaimed in BRL too, fetched with the Settings token", async () => {
+    const fetch = vi.fn(async (_url: string, _init?: RequestInit) => new Response(JSON.stringify({ USDBRL: { bid: "5.0" } })));
+    vi.stubGlobal("fetch", fetch);
+    renderWithIpc(<App />, { ...fakeCore(), get_settings: () => ({ awesomeapiToken: "sk_test" }) });
+
+    const figuresList = await screen.findByRole("region", { name: "Period totals" });
+    await vi.waitFor(() => expect(figuresList).toHaveTextContent("Earned$344.17≈ R$ 1.720,85"));
+    expect(figuresList).toHaveTextContent("Unclaimed$344.17≈ R$ 1.720,85");
+    expect(figuresList).toHaveTextContent("Owed$0.00Treasury");
+    expect(screen.getByRole("region", { name: "All time" })).toHaveTextContent("Unclaimed $999.00 ≈ R$ 4.995,00");
+    expect(fetch).toHaveBeenCalledWith("https://economia.awesomeapi.com.br/json/last/USD-BRL", { headers: { "x-api-key": "sk_test" } });
+  });
+
+  it("leaves BRL out when the rate can't be fetched", async () => {
+    renderWithIpc(<App />, { ...fakeCore(), get_settings: () => ({ awesomeapiToken: null }) });
+
+    const figuresList = await screen.findByRole("region", { name: "Period totals" });
+    await vi.waitFor(() => expect(figuresList).toHaveTextContent("Earned$344.17"));
+    await vi.waitFor(() => expect(fetch).toHaveBeenCalled());
+    expect(document.body).not.toHaveTextContent("R$");
+  });
+
   it("charts Hours per day with the value on hover", async () => {
     const { user } = renderWithIpc(<App />, fakeCore());
 

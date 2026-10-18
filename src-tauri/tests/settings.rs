@@ -15,6 +15,7 @@ fn edit() -> SettingsEdit {
         net_days: "15".into(),
         invoice_prefix: "SD-".into(),
         next_invoice_number: "42".into(),
+        awesomeapi_token: " sk_test ".into(),
     }
 }
 
@@ -41,6 +42,7 @@ async fn a_fresh_database_has_the_defaults() {
             net_days: 30,
             invoice_prefix: "INV-".into(),
             next_invoice_number: 1,
+            awesomeapi_token: None,
         }
     );
 }
@@ -62,6 +64,7 @@ async fn every_field_is_saved_and_survives_a_restart() {
         net_days: 15,
         invoice_prefix: "SD-".into(),
         next_invoice_number: 42,
+        awesomeapi_token: Some("sk_test".into()),
     };
     assert_eq!(saved, expected);
     assert_eq!(get_settings(&f.db).await.unwrap(), expected);
@@ -82,6 +85,7 @@ async fn text_is_trimmed_and_blank_optionals_clear() {
             tax_id: "  ".into(),
             payment_instructions: "".into(),
             invoice_prefix: "".into(),
+            awesomeapi_token: " ".into(),
             ..edit()
         },
     )
@@ -94,6 +98,7 @@ async fn text_is_trimmed_and_blank_optionals_clear() {
     assert_eq!(saved.email, None);
     assert_eq!(saved.tax_id, None);
     assert_eq!(saved.payment_instructions, None);
+    assert_eq!(saved.awesomeapi_token, None);
     assert_eq!(saved.invoice_prefix, "");
 }
 
